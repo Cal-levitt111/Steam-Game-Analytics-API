@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Select, asc, desc, func, select
+from sqlalchemy import Select, asc, desc, func, or_, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.game import Developer, Game, Genre, Publisher, Tag
@@ -124,3 +124,113 @@ def get_game_by_id(db: Session, game_id: int) -> Game | None:
         )
     )
     return db.scalar(stmt)
+
+
+def _load_games_by_ids(db: Session, game_ids: list[int]) -> list[Game]:
+    if not game_ids:
+        return []
+    stmt = (
+        select(Game)
+        .where(Game.id.in_(game_ids))
+        .options(
+            selectinload(Game.genres),
+            selectinload(Game.tags),
+            selectinload(Game.categories),
+            selectinload(Game.developers),
+            selectinload(Game.publishers),
+        )
+    )
+    by_id = {game.id: game for game in db.scalars(stmt).all()}
+    return [by_id[game_id] for game_id in game_ids if game_id in by_id]
+
+
+def search_games(
+    db: Session,
+    *,
+    q: str,
+    page: int,
+    per_page: int,
+    genre: str | None,
+    tag: str | None,
+    is_free: bool | None,
+    min_score: int | None,
+) -> tuple[list[Game], int, dict[int, float | None]]:
+    offset = (page - 1) * per_page
+
+    if db.bind and db.bind.dialect.name == 'postgresql':
+        where_sql = [
+            "g.search_vector @@ websearch_to_tsquery('english', :q)",
+            "(:genre IS NULL OR EXISTS (SELECT 1 FROM game_genres gg JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = g.id AND ge.slug = :genre))",
+            "(:tag IS NULL OR EXISTS (SELECT 1 FROM game_tags gt JOIN tags t ON t.id = gt.tag_id WHERE gt.game_id = g.id AND t.slug = :tag))",
+            "(:is_free IS NULL OR g.is_free = :is_free)",
+            "(:min_score IS NULL OR g.metacritic_score >= :min_score)",
+        ]
+
+        params = {
+            'q': q,
+            'genre': genre,
+            'tag': tag,
+            'is_free': is_free,
+            'min_score': min_score,
+            'limit': per_page,
+            'offset': offset,
+        }
+
+        count_sql = text(
+            f"""
+            SELECT COUNT(*)
+            FROM games g
+            WHERE {' AND '.join(where_sql)}
+            """
+        )
+        total = int(db.execute(count_sql, params).scalar() or 0)
+
+        search_sql = text(
+            f"""
+            SELECT
+                g.id,
+                ts_rank(g.search_vector, websearch_to_tsquery('english', :q)) AS rank
+            FROM games g
+            WHERE {' AND '.join(where_sql)}
+            ORDER BY rank DESC, g.id ASC
+            LIMIT :limit OFFSET :offset
+            """
+        )
+        rows = db.execute(search_sql, params).all()
+        ordered_ids = [int(row[0]) for row in rows]
+        rank_map = {int(row[0]): float(row[1]) if row[1] is not None else None for row in rows}
+        games = _load_games_by_ids(db, ordered_ids)
+        return games, total, rank_map
+
+    pattern = f'%{q}%'
+    stmt = (
+        select(Game)
+        .where(or_(Game.name.ilike(pattern), Game.short_description.ilike(pattern)))
+        .options(
+            selectinload(Game.genres),
+            selectinload(Game.tags),
+            selectinload(Game.categories),
+            selectinload(Game.developers),
+            selectinload(Game.publishers),
+        )
+    )
+    stmt = _apply_filters(
+        stmt,
+        genre=genre,
+        tag=tag,
+        developer=None,
+        publisher=None,
+        platform=None,
+        is_free=is_free,
+        min_price=None,
+        max_price=None,
+        min_score=min_score,
+        release_from=None,
+        release_to=None,
+    ).distinct()
+
+    count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
+    total = db.scalar(count_stmt) or 0
+    games = list(db.scalars(stmt.order_by(Game.name.asc(), Game.id.asc()).offset(offset).limit(per_page)).all())
+    rank_map = {game.id: None for game in games}
+    return games, total, rank_map

@@ -42,3 +42,7 @@ class GameDetail(GameListItem):
     categories: list[NamedSlug] = []
     developers: list[NamedSlug] = []
     publishers: list[NamedSlug] = []
+
+
+class SearchGameItem(GameListItem):
+    rank: float | None = None

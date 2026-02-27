@@ -157,3 +157,81 @@ def get_score_by_genre(db: Session) -> list[dict[str, object]]:
         }
         for name, slug, avg_score, avg_sentiment, game_count in rows
     ]
+
+
+def get_free_vs_paid(db: Session) -> list[dict[str, object]]:
+    stmt = (
+        select(
+            Game.is_free,
+            func.count(Game.id).label('game_count'),
+            func.avg(func.nullif(Game.metacritic_score, 0)).label('avg_score'),
+            func.avg(Game.positive_reviews + Game.negative_reviews).label('avg_reviews'),
+        )
+        .group_by(Game.is_free)
+        .order_by(Game.is_free.desc())
+    )
+    rows = db.execute(stmt).all()
+    return [
+        {
+            'type': 'free' if is_free else 'paid',
+            'game_count': int(game_count),
+            'avg_score': float(avg_score) if avg_score is not None else None,
+            'avg_reviews': float(avg_reviews) if avg_reviews is not None else None,
+        }
+        for is_free, game_count, avg_score, avg_reviews in rows
+    ]
+
+
+def get_platform_breakdown(db: Session) -> list[dict[str, object]]:
+    stmt = select(
+        func.count(Game.id).label('total_games'),
+        func.sum(case((Game.windows.is_(True), 1), else_=0)).label('windows'),
+        func.sum(case((Game.mac.is_(True), 1), else_=0)).label('mac'),
+        func.sum(case((Game.linux.is_(True), 1), else_=0)).label('linux'),
+        func.sum(case((and_(Game.windows.is_(True), Game.mac.is_(True)), 1), else_=0)).label('windows_mac'),
+        func.sum(case((and_(Game.windows.is_(True), Game.linux.is_(True)), 1), else_=0)).label('windows_linux'),
+        func.sum(case((and_(Game.mac.is_(True), Game.linux.is_(True)), 1), else_=0)).label('mac_linux'),
+        func.sum(
+            case(
+                (and_(Game.windows.is_(True), Game.mac.is_(True), Game.linux.is_(True)), 1),
+                else_=0,
+            )
+        ).label('all_three'),
+    )
+    row = db.execute(stmt).one()
+    keys = [
+        'total_games',
+        'windows',
+        'mac',
+        'linux',
+        'windows_mac',
+        'windows_linux',
+        'mac_linux',
+        'all_three',
+    ]
+    return [{key: int(value or 0) for key, value in zip(keys, row)}]
+
+
+def get_review_sentiment(db: Session) -> list[dict[str, object]]:
+    rows = db.execute(
+        select(Game.positive_reviews, Game.negative_reviews).where((Game.positive_reviews + Game.negative_reviews) > 0)
+    ).all()
+    total = len(rows) or 1
+    buckets = [0] * 10
+    for positive, negative in rows:
+        ratio = positive / (positive + negative)
+        index = min(int(ratio * 10), 9)
+        buckets[index] += 1
+
+    data = []
+    for index, count in enumerate(buckets):
+        start = index * 10
+        end = (index + 1) * 10
+        data.append(
+            {
+                'bucket': f'{start}-{end}%',
+                'count': count,
+                'pct': round((count / total) * 100, 2),
+            }
+        )
+    return data

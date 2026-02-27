@@ -5,9 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.repositories.analytics_repo import (
+    get_free_vs_paid,
     get_genre_growth,
+    get_platform_breakdown,
     get_price_distribution,
     get_release_trends,
+    get_review_sentiment,
     get_score_by_genre,
     get_top_developers,
     get_top_genres,
@@ -71,4 +74,22 @@ def top_developers(
 @router.get('/score-by-genre')
 def score_by_genre(db: Session = Depends(get_db)) -> dict[str, object]:
     data = get_score_by_genre(db)
+    return _envelope(data, {})
+
+
+@router.get('/free-vs-paid')
+def free_vs_paid(db: Session = Depends(get_db)) -> dict[str, object]:
+    data = get_free_vs_paid(db)
+    return _envelope(data, {})
+
+
+@router.get('/platform-breakdown')
+def platform_breakdown(db: Session = Depends(get_db)) -> dict[str, object]:
+    data = get_platform_breakdown(db)
+    return _envelope(data, {})
+
+
+@router.get('/review-sentiment')
+def review_sentiment(db: Session = Depends(get_db)) -> dict[str, object]:
+    data = get_review_sentiment(db)
     return _envelope(data, {})

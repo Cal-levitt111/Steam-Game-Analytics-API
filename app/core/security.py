@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -32,5 +32,7 @@ def create_access_token(subject: str, expires_delta_minutes: int | None = None) 
 def decode_access_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    except ExpiredSignatureError as exc:
+        raise ValueError('TOKEN_EXPIRED') from exc
     except JWTError as exc:
         raise ValueError('TOKEN_INVALID') from exc

@@ -28,3 +28,16 @@ def login_user(db: Session, *, email: str, password: str) -> tuple[User, str]:
 
     token = create_access_token(str(user.id))
     return user, token
+
+
+def update_current_user(
+    db: Session,
+    user: User,
+    *,
+    display_name: str | None,
+    new_password: str | None,
+) -> User:
+    hashed_password = hash_password(new_password) if new_password else None
+    updated = user_repo.update_user(db, user, display_name=display_name, hashed_password=hashed_password)
+    db.commit()
+    return updated

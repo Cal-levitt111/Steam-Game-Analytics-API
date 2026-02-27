@@ -11,7 +11,7 @@ router = APIRouter(prefix='/search', tags=['search'])
 
 @router.get('')
 def search_games(
-    q: str = Query(min_length=1),
+    q: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
     genre: str | None = None,

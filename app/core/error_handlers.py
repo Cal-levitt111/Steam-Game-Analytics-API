@@ -13,7 +13,14 @@ def _error_payload(code: str, message: str, detail: object | None = None) -> dic
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def handle_app_exception(_: Request, exc: AppException) -> JSONResponse:
-        return JSONResponse(status_code=exc.status_code, content=_error_payload(exc.code, exc.message, exc.detail))
+        headers = exc.headers.copy()
+        if exc.status_code == 401 and 'WWW-Authenticate' not in headers:
+            headers['WWW-Authenticate'] = 'Bearer'
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=_error_payload(exc.code, exc.message, exc.detail),
+            headers=headers,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -30,13 +37,20 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_http_exception(_: Request, exc: StarletteHTTPException) -> JSONResponse:
         if exc.status_code == 404:
             payload = _error_payload('RESOURCE_NOT_FOUND', 'The requested resource was not found.', None)
+        elif exc.status_code == 400:
+            payload = _error_payload('BAD_REQUEST', 'The request was malformed or missing required parameters.', None)
         elif exc.status_code == 401:
             payload = _error_payload('UNAUTHORIZED', 'Authentication credentials were not provided or are invalid.', None)
         elif exc.status_code == 403:
             payload = _error_payload('FORBIDDEN', 'You do not have permission to perform this action.', None)
+        elif exc.status_code == 409:
+            payload = _error_payload('CONFLICT', 'The request conflicted with existing resource state.', None)
+        elif exc.status_code == 429:
+            payload = _error_payload('TOO_MANY_REQUESTS', 'Too many requests. Please retry later.', None)
         else:
             payload = _error_payload('HTTP_ERROR', str(exc.detail), None)
-        return JSONResponse(status_code=exc.status_code, content=payload)
+        headers = {'WWW-Authenticate': 'Bearer'} if exc.status_code == 401 else None
+        return JSONResponse(status_code=exc.status_code, content=payload, headers=headers)
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(_: Request, __: Exception) -> JSONResponse:

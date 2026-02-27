@@ -15,7 +15,7 @@ def search_catalog(
     is_free: bool | None,
     min_score: int | None,
 ):
-    if not q.strip():
+    if q is None or not q.strip():
         raise AppException(400, 'BAD_REQUEST', "Query parameter 'q' is required.")
     return search_games(
         db,

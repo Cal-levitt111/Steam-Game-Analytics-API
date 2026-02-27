@@ -35,3 +35,26 @@ def ensure_collection_visible(collection: Collection, user: User | None) -> None
         return
     if user is None or user.id != collection.user_id:
         raise AppException(403, 'FORBIDDEN', 'You do not have permission to view this private collection.')
+
+
+def add_game_membership(db: Session, *, collection_id: int, game_id: int, user: User) -> None:
+    collection = get_collection_or_404(db, collection_id)
+    ensure_collection_owner(collection, user)
+
+    if not collection_repo.game_exists(db, game_id):
+        raise AppException(404, 'RESOURCE_NOT_FOUND', f'Game with id {game_id} was not found.')
+
+    if collection_repo.collection_has_game(db, collection_id, game_id):
+        raise AppException(409, 'CONFLICT', 'Game is already in the collection.')
+
+    collection_repo.add_game_to_collection(db, collection_id, game_id)
+    db.commit()
+
+
+def remove_game_membership(db: Session, *, collection_id: int, game_id: int, user: User) -> None:
+    collection = get_collection_or_404(db, collection_id)
+    ensure_collection_owner(collection, user)
+    deleted = collection_repo.remove_game_from_collection(db, collection_id, game_id)
+    if deleted == 0:
+        raise AppException(404, 'RESOURCE_NOT_FOUND', 'Collection game entry was not found.')
+    db.commit()

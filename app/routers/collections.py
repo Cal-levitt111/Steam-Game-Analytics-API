@@ -8,10 +8,12 @@ from app.models.user import User
 from app.repositories.collection_repo import list_public_collections, list_user_collections, update_collection as update_collection_repo
 from app.schemas.collection import CollectionCreateRequest, CollectionDetail, CollectionListItem, CollectionRead, CollectionUpdateRequest
 from app.services.collection_service import (
+    add_game_membership,
     create_collection,
     ensure_collection_owner,
     ensure_collection_visible,
     get_collection_or_404,
+    remove_game_membership,
 )
 
 router = APIRouter(prefix='/collections', tags=['collections'])
@@ -120,4 +122,26 @@ def delete_collection_route(
     ensure_collection_owner(collection, current_user)
     db.delete(collection)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post('/{collection_id}/games/{game_id}', status_code=status.HTTP_201_CREATED)
+def add_game_to_collection_route(
+    collection_id: int,
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, object]:
+    add_game_membership(db, collection_id=collection_id, game_id=game_id, user=current_user)
+    return {'data': {'collection_id': collection_id, 'game_id': game_id}}
+
+
+@router.delete('/{collection_id}/games/{game_id}', status_code=status.HTTP_204_NO_CONTENT)
+def remove_game_from_collection_route(
+    collection_id: int,
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    remove_game_membership(db, collection_id=collection_id, game_id=game_id, user=current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

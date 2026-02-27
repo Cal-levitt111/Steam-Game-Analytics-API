@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.core import settings
 from app.core.error_handlers import register_exception_handlers
 from app.routers.auth import router as auth_router
+from app.routers.collections import router as collections_router
 from app.routers.developers import router as developers_router
 from app.routers.games import router as games_router
 from app.routers.genres import router as genres_router
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(tags_router, prefix=settings.api_prefix)
     app.include_router(developers_router, prefix=settings.api_prefix)
     app.include_router(publishers_router, prefix=settings.api_prefix)
+    app.include_router(collections_router, prefix=settings.api_prefix)
     return app
 
 

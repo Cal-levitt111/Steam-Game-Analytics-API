@@ -12,6 +12,7 @@ from psycopg.rows import dict_row
 from slugify import slugify
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://steam:steam@localhost:5432/steamgames')
+SEED_DATASET_PATH = Path('data/seed/steam_games_seed.csv')
 
 DIMENSION_COLUMNS = {
     'developers': 'developers',
@@ -284,6 +285,7 @@ def run_import(input_csv: Path, dry_run: bool) -> None:
         for dimension_table, (junction_table, foreign_key) in JUNCTION_CONFIG.items():
             insert_junction_rows(conn, junction_table, foreign_key, junction_rows.get(junction_table, []))
 
+        refresh_search_vectors(conn)
         conn.commit()
 
     print('Game and dimension import complete.')
@@ -291,14 +293,51 @@ def run_import(input_csv: Path, dry_run: bool) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Import Steam game dataset into PostgreSQL.')
-    parser.add_argument('--input', type=Path, required=True, help='Path to CSV dataset to import.')
+    parser.add_argument('--mode', choices=['seed', 'full'], default='seed', help='seed uses committed sample data, full uses your local full CSV.')
+    parser.add_argument('--input', type=Path, default=None, help='Optional dataset path. Required when --mode full.')
     parser.add_argument('--dry-run', action='store_true', help='Load and normalize only; skip DB writes.')
     return parser.parse_args()
 
 
+def resolve_input_path(mode: str, input_path: Path | None) -> Path:
+    if input_path is not None:
+        return input_path
+    if mode == 'seed':
+        return SEED_DATASET_PATH
+    raise ValueError('--input is required when --mode full')
+
+
+def refresh_search_vectors(conn: psycopg.Connection) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE games g
+            SET search_vector =
+                setweight(to_tsvector('english', COALESCE(g.name, '')), 'A') ||
+                setweight(to_tsvector('english', COALESCE(g.short_description, '')), 'B') ||
+                setweight(
+                    to_tsvector(
+                        'english',
+                        COALESCE(
+                            (
+                                SELECT string_agg(t.name, ' ')
+                                FROM game_tags gt
+                                JOIN tags t ON t.id = gt.tag_id
+                                WHERE gt.game_id = g.id
+                            ),
+                            ''
+                        )
+                    ),
+                    'C'
+                );
+            """
+        )
+
+
 def main() -> None:
     args = parse_args()
-    run_import(args.input, args.dry_run)
+    input_path = resolve_input_path(args.mode, args.input)
+    run_import(input_path, args.dry_run)
 
 
 if __name__ == '__main__':

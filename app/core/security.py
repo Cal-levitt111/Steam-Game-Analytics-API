@@ -1,21 +1,43 @@
+import base64
 from datetime import UTC, datetime, timedelta
+import hashlib
+import hmac
+import os
 from typing import Any
 
 from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
 ALGORITHM = 'HS256'
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+PBKDF2_ITERATIONS = 390000
+
+
+def _b64_encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode('utf-8')
+
+
+def _b64_decode(raw: str) -> bytes:
+    return base64.urlsafe_b64decode(raw.encode('utf-8'))
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = os.urandom(16)
+    derived_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, PBKDF2_ITERATIONS)
+    return f'pbkdf2_sha256${PBKDF2_ITERATIONS}${_b64_encode(salt)}${_b64_encode(derived_key)}'
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        algorithm, iterations, salt_b64, hash_b64 = hashed_password.split('$', 3)
+        if algorithm != 'pbkdf2_sha256':
+            return False
+        salt = _b64_decode(salt_b64)
+        expected = _b64_decode(hash_b64)
+        candidate = hashlib.pbkdf2_hmac('sha256', plain_password.encode('utf-8'), salt, int(iterations))
+        return hmac.compare_digest(candidate, expected)
+    except Exception:
+        return False
 
 
 def create_access_token(subject: str, expires_delta_minutes: int | None = None) -> str:

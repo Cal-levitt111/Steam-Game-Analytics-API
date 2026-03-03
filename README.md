@@ -7,6 +7,7 @@ FastAPI backend for Steam game catalog, search, taxonomy browsing, collections C
 - FastAPI
 - PostgreSQL + SQLAlchemy
 - pgvector (Postgres extension)
+- fastapi-mcp (MCP server mount)
 - Alembic migrations
 - sentence-transformers (local embedding generation)
 - Pytest + TestClient
@@ -105,6 +106,7 @@ python -m pytest tests/test_analytics.py -q
 - `GET /api/v1/games/{id}`
 - `GET /api/v1/games/{id}/similar`
 - `GET /api/v1/search`
+- `MCP server mount at /mcp` (read-only tool exposure)
 - `GET /api/v1/genres`, `GET /api/v1/genres/{slug}`, `GET /api/v1/genres/{slug}/games`
 - `GET /api/v1/tags`, `GET /api/v1/tags/{slug}`, `GET /api/v1/tags/{slug}/games`
 - `GET /api/v1/developers`, `GET /api/v1/developers/{slug}`, `GET /api/v1/developers/{slug}/games`
@@ -121,10 +123,17 @@ python -m pytest tests/test_analytics.py -q
   - `409 EMBEDDING_NOT_AVAILABLE` when target game has no embedding
   - `501 FEATURE_UNAVAILABLE` when vector support/config is unavailable
 
+## MCP Notes
+
+- MCP server is mounted at `/mcp`.
+- Exposure is intentionally read-only by tag allowlist:
+  - `health`, `games`, `search`, `genres`, `tags`, `developers`, `publishers`, `analytics`
+- Auth and collections write flows are excluded from MCP tool exposure.
+
 ## Notes
 
 - Docker is required only if you use the compose Postgres path.
 - In this local environment, migrations were validated via Alembic offline SQL generation when live Postgres was unavailable.
 - Head migrations include index hardening for search/filter workloads (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`).
 - Head migrations also include pgvector enablement and game embedding index (`ix_games_embedding_ivfflat_cosine`).
-- MCP and frontend work are intentionally deferred.
+- Frontend work is intentionally deferred.

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi_mcp import FastApiMCP
 
 from app.core import settings
 from app.core.error_handlers import register_exception_handlers
@@ -12,6 +13,17 @@ from app.routers.health import router as health_router
 from app.routers.publishers import router as publishers_router
 from app.routers.search import router as search_router
 from app.routers.tags import router as tags_router
+
+MCP_READONLY_TAGS = [
+    'health',
+    'games',
+    'search',
+    'genres',
+    'tags',
+    'developers',
+    'publishers',
+    'analytics',
+]
 
 
 def create_app() -> FastAPI:
@@ -27,6 +39,17 @@ def create_app() -> FastAPI:
     app.include_router(publishers_router, prefix=settings.api_prefix)
     app.include_router(collections_router, prefix=settings.api_prefix)
     app.include_router(analytics_router, prefix=settings.api_prefix)
+
+    if settings.enable_mcp_server:
+        mcp = FastApiMCP(
+            app,
+            name=settings.app_name,
+            describe_all_responses=True,
+            include_tags=MCP_READONLY_TAGS,
+        )
+        mcp.mount(mount_path=settings.mcp_mount_path)
+        app.state.mcp = mcp
+
     return app
 
 

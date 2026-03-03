@@ -13,6 +13,7 @@ Core capabilities implemented so far:
 - Analytics endpoints for trends, distribution, and aggregate breakdowns.
 - Seed/full CSV import pipeline into Postgres.
 - Embedding generation pipeline (`scripts/generate_embeddings.py`) for local similarity setup.
+- MCP server compatibility mounted at `/mcp` with read-only tool exposure.
 
 API base path: `/api/v1`
 
@@ -22,6 +23,7 @@ API base path: `/api/v1`
 - SQLAlchemy ORM (2.x)
 - PostgreSQL (Docker Compose for local DB)
 - pgvector extension (vector storage and ANN index)
+- fastapi-mcp (MCP server mount from OpenAPI)
 - Alembic migrations
 - Pydantic v2 for request/response validation
 - `python-jose` for JWT
@@ -76,6 +78,8 @@ Expected variables:
 - `EMBEDDING_MODEL`
 - `EMBEDDING_DIM`
 - `EMBEDDING_BATCH_SIZE`
+- `ENABLE_MCP_SERVER`
+- `MCP_MOUNT_PATH`
 
 Important note:
 - Current defaults are development-friendly, not production-safe (`SECRET_KEY` placeholder and 24h tokens in example).
@@ -190,6 +194,12 @@ All routes are under `/api/v1`.
   - Returns `{"data": [GameListItem + similarity]}`
   - Error paths: `404 RESOURCE_NOT_FOUND`, `409 EMBEDDING_NOT_AVAILABLE`, `501 FEATURE_UNAVAILABLE`
 
+### MCP
+- Mount path: `/mcp`
+- Implementation: `fastapi-mcp` wraps selected FastAPI operations as tools.
+- Exposed tags: `health`, `games`, `search`, `genres`, `tags`, `developers`, `publishers`, `analytics`.
+- Excluded from MCP exposure: `auth` and `collections`.
+
 ### Search
 - `GET /search?q=<query>`
   - `q` required
@@ -284,6 +294,7 @@ Current test files:
 - `test_analytics.py`: analytics response shape/sanity.
 - `test_migrations.py`: migration SQL smoke check.
 - `test_game_similarity.py`: similar endpoint shape and error handling.
+- `test_mcp.py`: MCP mount and read-only exposure boundary checks.
 
 ## Known Caveats and Follow-ups
 - Security posture is baseline/dev-friendly; production hardening is pending.
@@ -310,4 +321,5 @@ As of this document:
 - Baseline coursework API scope is implemented and manually exercised.
 - Seed import and endpoint testing are operational.
 - pgvector similarity feature is implemented and tested.
-- MCP server exposure and frontend remain deferred.
+- MCP server exposure is implemented.
+- Frontend remains deferred.

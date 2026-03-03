@@ -13,8 +13,9 @@
 | Publishers | `GET /api/v1/publishers`, `GET /api/v1/publishers/{slug}`, `GET /api/v1/publishers/{slug}/games` |
 | Collections | `POST /api/v1/collections`, `GET /api/v1/collections`, `GET /api/v1/collections/{id}`, `PUT /api/v1/collections/{id}`, `DELETE /api/v1/collections/{id}`, `POST /api/v1/collections/{id}/games/{game_id}`, `DELETE /api/v1/collections/{id}/games/{game_id}`, `GET /api/v1/collections/public` |
 | Analytics | `GET /api/v1/analytics/release-trends`, `GET /api/v1/analytics/top-genres`, `GET /api/v1/analytics/genre-growth`, `GET /api/v1/analytics/price-distribution`, `GET /api/v1/analytics/top-developers`, `GET /api/v1/analytics/score-by-genre`, `GET /api/v1/analytics/free-vs-paid`, `GET /api/v1/analytics/platform-breakdown`, `GET /api/v1/analytics/review-sentiment` |
+| MCP | `GET /mcp`, `POST /mcp/messages/` (mounted tool protocol endpoint with read-only tag exposure) |
 
-Total implemented endpoints: 38
+Total implemented endpoints: 40
 
 ## Coursework Criteria Mapping
 
@@ -29,6 +30,7 @@ Total implemented endpoints: 38
 | Testing | Pytest suite covering migrations, auth, taxonomy, collections, analytics, API errors |
 | Architecture quality | Router -> service -> repository separation with models/schemas |
 | Advanced querying | Full-text search + pgvector similarity + aggregation-heavy analytics endpoints |
+| Advanced integration | MCP server mount at `/mcp` with read-only tool boundaries |
 
 ## Verification Commands
 

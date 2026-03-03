@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default='sentence-transformers/all-MiniLM-L6-v2', alias='EMBEDDING_MODEL')
     embedding_dim: int = Field(default=384, alias='EMBEDDING_DIM')
     embedding_batch_size: int = Field(default=64, alias='EMBEDDING_BATCH_SIZE')
+    enable_mcp_server: bool = Field(default=True, alias='ENABLE_MCP_SERVER')
+    mcp_mount_path: str = Field(default='/mcp', alias='MCP_MOUNT_PATH')
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', case_sensitive=False)
 

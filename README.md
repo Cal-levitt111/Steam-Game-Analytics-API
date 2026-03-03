@@ -102,4 +102,5 @@ python -m pytest tests/test_analytics.py -q
 
 - Docker is required only if you use the compose Postgres path.
 - In this local environment, migrations were validated via Alembic offline SQL generation when live Postgres was unavailable.
+- Head migrations include index hardening for search/filter workloads (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`).
 - Advanced features (pgvector similarity, MCP, frontend) are intentionally deferred.

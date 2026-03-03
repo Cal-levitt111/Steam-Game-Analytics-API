@@ -32,9 +32,31 @@ class GameListItem(BaseModel):
 class GameDetail(GameListItem):
     short_description: str | None = None
     detailed_description: str | None = None
+    about_the_game: str | None = None
     required_age: int
+    estimated_owners: str | None = None
+    peak_ccu: int | None = None
+    discount_percent: int | None = None
+    dlc_count: int | None = None
+    supported_languages: str | None = None
+    full_audio_languages: str | None = None
+    reviews: str | None = None
     website: str | None = None
+    support_url: str | None = None
+    support_email: str | None = None
     header_image: str | None = None
+    metacritic_url: str | None = None
+    user_score: int | None = None
+    score_rank: str | None = None
+    achievements: int | None = None
+    recommendations: int | None = None
+    notes: str | None = None
+    average_playtime_forever: int | None = None
+    average_playtime_two_weeks: int | None = None
+    median_playtime_forever: int | None = None
+    median_playtime_two_weeks: int | None = None
+    screenshots: str | None = None
+    movies: str | None = None
     created_at: datetime
 
     genres: list[NamedSlug] = []

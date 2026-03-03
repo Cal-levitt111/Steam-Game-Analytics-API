@@ -20,6 +20,7 @@ This separation keeps endpoint handlers thin and makes query logic testable in i
 - A follow-up hardening migration restores search/filter indexes at head (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`)
 - Similar-game recommendations use pgvector cosine distance (`/games/{id}/similar`)
 - Embeddings are generated offline via `scripts/generate_embeddings.py` and stored in `games.embedding`
+- MCP server is mounted at `/mcp` using `fastapi-mcp`, with read-only tag allowlisting
 - Data import is idempotent (`ON CONFLICT` strategy) and supports `seed` and `full` modes
 - Error responses use a consistent envelope for machine-friendly client handling
 
@@ -33,7 +34,6 @@ This separation keeps endpoint handlers thin and makes query logic testable in i
 
 ## Deferred Features (Intentional)
 
-- MCP server exposure (`/mcp`)
 - Next.js frontend
 - Rate limiting / Redis caching
 - Cloud deployment playbooks (Render/Railway) as production runbook docs

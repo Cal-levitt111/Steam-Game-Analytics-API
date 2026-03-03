@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.pagination import build_pagination
-from app.schemas.game import GameDetail, GameListItem
-from app.services.game_service import get_game_or_404, list_games
+from app.schemas.game import GameDetail, GameListItem, SimilarGameItem
+from app.services.game_service import get_game_or_404, list_games, list_similar_games
 
 router = APIRouter(prefix='/games', tags=['games'])
 
@@ -79,3 +79,19 @@ def list_games_route(
 def get_game_detail(game_id: int, db: Session = Depends(get_db)) -> GameDetail:
     game = get_game_or_404(db, game_id)
     return GameDetail.model_validate(game)
+
+
+@router.get('/{game_id}/similar')
+def get_similar_games_route(
+    game_id: int,
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    games, similarity_map = list_similar_games(db, game_id=game_id, limit=limit)
+
+    data: list[dict[str, object]] = []
+    for game in games:
+        item = SimilarGameItem.model_validate(game).model_dump()
+        item['similarity'] = similarity_map.get(game.id)
+        data.append(item)
+    return {'data': data}

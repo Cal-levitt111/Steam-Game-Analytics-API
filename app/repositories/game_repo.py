@@ -126,6 +126,57 @@ def get_game_by_id(db: Session, game_id: int) -> Game | None:
     return db.scalar(stmt)
 
 
+def is_vector_similarity_supported(db: Session) -> bool:
+    if not db.bind or db.bind.dialect.name != 'postgresql':
+        return False
+    return bool(db.execute(text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector');")).scalar())
+
+
+def get_game_embedding_state(db: Session, game_id: int) -> tuple[int, bool] | None:
+    row = db.execute(
+        text(
+            """
+            SELECT id, embedding IS NOT NULL AS has_embedding
+            FROM games
+            WHERE id = :game_id
+            """
+        ),
+        {'game_id': game_id},
+    ).one_or_none()
+    if row is None:
+        return None
+    return int(row[0]), bool(row[1])
+
+
+def find_similar_games(db: Session, *, game_id: int, limit: int) -> tuple[list[Game], dict[int, float]]:
+    rows = db.execute(
+        text(
+            """
+            WITH target AS (
+                SELECT embedding
+                FROM games
+                WHERE id = :game_id
+            )
+            SELECT
+                g.id,
+                1 - (g.embedding <=> target.embedding) AS similarity
+            FROM games g
+            CROSS JOIN target
+            WHERE g.id != :game_id
+              AND g.embedding IS NOT NULL
+              AND target.embedding IS NOT NULL
+            ORDER BY g.embedding <=> target.embedding, g.id ASC
+            LIMIT :limit
+            """
+        ),
+        {'game_id': game_id, 'limit': limit},
+    ).all()
+    ordered_ids = [int(row[0]) for row in rows]
+    similarity_map = {int(row[0]): float(row[1]) for row in rows}
+    games = _load_games_by_ids(db, ordered_ids)
+    return games, similarity_map
+
+
 def _load_games_by_ids(db: Session, game_ids: list[int]) -> list[Game]:
     if not game_ids:
         return []

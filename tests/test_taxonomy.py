@@ -54,6 +54,7 @@ def taxonomy_client() -> TestClient:
                 linux BOOLEAN DEFAULT 0,
                 screenshots TEXT,
                 movies TEXT,
+                embedding TEXT,
                 search_vector TEXT,
                 created_at TEXT
             )

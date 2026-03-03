@@ -66,3 +66,7 @@ class GameDetail(GameListItem):
 
 class SearchGameItem(GameListItem):
     rank: float | None = None
+
+
+class SimilarGameItem(GameListItem):
+    similarity: float | None = None

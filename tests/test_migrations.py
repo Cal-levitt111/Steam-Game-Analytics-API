@@ -23,3 +23,10 @@ def test_alembic_upgrade_head_generates_expected_sql() -> None:
     sql_script = result.stdout
     for snippet in EXPECTED_SQL_SNIPPETS:
         assert snippet in sql_script
+
+    # These indexes are created in an earlier migration, dropped later,
+    # and must be recreated by the hardening migration at head.
+    assert sql_script.rfind('CREATE INDEX ix_games_search_vector') > sql_script.rfind('DROP INDEX ix_games_search_vector')
+    assert sql_script.rfind('CREATE INDEX ix_games_metacritic_score') > sql_script.rfind('DROP INDEX ix_games_metacritic_score')
+    assert sql_script.rfind('CREATE INDEX ix_games_release_date') > sql_script.rfind('DROP INDEX ix_games_release_date')
+    assert sql_script.rfind('CREATE INDEX ix_games_price_usd') > sql_script.rfind('DROP INDEX ix_games_price_usd')

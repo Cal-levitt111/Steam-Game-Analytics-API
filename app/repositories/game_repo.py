@@ -158,23 +158,29 @@ def search_games(
     offset = (page - 1) * per_page
 
     if db.bind and db.bind.dialect.name == 'postgresql':
-        where_sql = [
-            "g.search_vector @@ websearch_to_tsquery('english', :q)",
-            "(:genre IS NULL OR EXISTS (SELECT 1 FROM game_genres gg JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = g.id AND ge.slug = :genre))",
-            "(:tag IS NULL OR EXISTS (SELECT 1 FROM game_tags gt JOIN tags t ON t.id = gt.tag_id WHERE gt.game_id = g.id AND t.slug = :tag))",
-            "(:is_free IS NULL OR g.is_free = :is_free)",
-            "(:min_score IS NULL OR g.metacritic_score >= :min_score)",
-        ]
-
-        params = {
+        where_sql = ["g.search_vector @@ websearch_to_tsquery('english', :q)"]
+        params: dict[str, object] = {
             'q': q,
-            'genre': genre,
-            'tag': tag,
-            'is_free': is_free,
-            'min_score': min_score,
             'limit': per_page,
             'offset': offset,
         }
+
+        if genre is not None:
+            where_sql.append(
+                "EXISTS (SELECT 1 FROM game_genres gg JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = g.id AND ge.slug = :genre)"
+            )
+            params['genre'] = genre
+        if tag is not None:
+            where_sql.append(
+                "EXISTS (SELECT 1 FROM game_tags gt JOIN tags t ON t.id = gt.tag_id WHERE gt.game_id = g.id AND t.slug = :tag)"
+            )
+            params['tag'] = tag
+        if is_free is not None:
+            where_sql.append("g.is_free = :is_free")
+            params['is_free'] = is_free
+        if min_score is not None:
+            where_sql.append("g.metacritic_score >= :min_score")
+            params['min_score'] = min_score
 
         count_sql = text(
             f"""

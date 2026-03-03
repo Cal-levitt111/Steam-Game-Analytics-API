@@ -21,18 +21,19 @@ Total implemented endpoints: 38
 | Criterion | Implemented Evidence |
 |---|---|
 | CRUD operations | Full CRUD on collections + membership add/remove |
-| 4+ endpoints | 37 endpoints across 9 resource groups |
+| 4+ endpoints | 38 endpoints across 9 resource groups |
 | SQL database usage | PostgreSQL schema with normalized dimensions + junction tables |
 | JSON + status codes | Consistent response/error envelopes and explicit status handling |
 | Authentication | JWT bearer auth, protected routes, ownership checks |
 | API documentation | FastAPI OpenAPI docs at `/docs` |
 | Testing | Pytest suite covering migrations, auth, taxonomy, collections, analytics, API errors |
 | Architecture quality | Router -> service -> repository separation with models/schemas |
-| Advanced querying | Full-text search + aggregation-heavy analytics endpoints |
+| Advanced querying | Full-text search + pgvector similarity + aggregation-heavy analytics endpoints |
 
 ## Verification Commands
 
 ```bash
 python -m pytest -q
 python -m alembic upgrade head --sql > nul
+python scripts/generate_embeddings.py --mode seed --only-missing
 ```

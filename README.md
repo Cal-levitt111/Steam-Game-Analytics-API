@@ -6,7 +6,9 @@ FastAPI backend for Steam game catalog, search, taxonomy browsing, collections C
 
 - FastAPI
 - PostgreSQL + SQLAlchemy
+- pgvector (Postgres extension)
 - Alembic migrations
+- sentence-transformers (local embedding generation)
 - Pytest + TestClient
 
 ## Quick Start
@@ -39,6 +41,13 @@ FastAPI backend for Steam game catalog, search, taxonomy browsing, collections C
    ```bash
    uvicorn app.main:app --reload
    ```
+
+If you see a Postgres collation mismatch warning after switching images, recreate volumes:
+
+```bash
+docker compose down -v
+docker compose up -d db
+```
 
 Docs: `http://localhost:8000/docs`  
 Health: `http://localhost:8000/api/v1/health`
@@ -103,9 +112,19 @@ python -m pytest tests/test_analytics.py -q
 - `POST/GET/PUT/DELETE /api/v1/collections...` (+ membership endpoints)
 - `GET /api/v1/analytics/*`
 
+## Similar Endpoint Notes
+
+- Endpoint: `GET /api/v1/games/{id}/similar?limit=10`
+- Query params: `limit` (default `10`, min `1`, max `50`)
+- Expected errors:
+  - `404 RESOURCE_NOT_FOUND` for missing `id`
+  - `409 EMBEDDING_NOT_AVAILABLE` when target game has no embedding
+  - `501 FEATURE_UNAVAILABLE` when vector support/config is unavailable
+
 ## Notes
 
 - Docker is required only if you use the compose Postgres path.
 - In this local environment, migrations were validated via Alembic offline SQL generation when live Postgres was unavailable.
 - Head migrations include index hardening for search/filter workloads (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`).
+- Head migrations also include pgvector enablement and game embedding index (`ix_games_embedding_ivfflat_cosine`).
 - MCP and frontend work are intentionally deferred.

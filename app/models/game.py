@@ -52,8 +52,6 @@ class Game(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     steam_app_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    short_description: Mapped[str | None] = mapped_column(Text)
-    detailed_description: Mapped[str | None] = mapped_column(Text)
     release_date: Mapped[date | None] = mapped_column(Date)
     estimated_owners: Mapped[str | None] = mapped_column(Text)
     peak_ccu: Mapped[int | None] = mapped_column(Integer)

@@ -30,8 +30,6 @@ class GameListItem(BaseModel):
 
 
 class GameDetail(GameListItem):
-    short_description: str | None = None
-    detailed_description: str | None = None
     about_the_game: str | None = None
     required_age: int
     estimated_owners: str | None = None

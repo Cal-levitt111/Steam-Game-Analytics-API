@@ -24,8 +24,6 @@ def collections_client() -> tuple[TestClient, sessionmaker[Session]]:
                     id INTEGER PRIMARY KEY,
                     steam_app_id INTEGER UNIQUE NOT NULL,
                     name TEXT NOT NULL,
-                    short_description TEXT,
-                    detailed_description TEXT,
                     release_date DATE,
                     estimated_owners TEXT,
                     peak_ccu INTEGER,

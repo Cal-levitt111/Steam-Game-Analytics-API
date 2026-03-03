@@ -205,7 +205,7 @@ def search_games(
     pattern = f'%{q}%'
     stmt = (
         select(Game)
-        .where(or_(Game.name.ilike(pattern), Game.short_description.ilike(pattern)))
+        .where(or_(Game.name.ilike(pattern), Game.about_the_game.ilike(pattern)))
         .options(
             selectinload(Game.genres),
             selectinload(Game.tags),

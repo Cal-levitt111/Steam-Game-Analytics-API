@@ -80,8 +80,6 @@ JUNCTION_CONFIG = {
 GAME_UPSERT_COLUMNS = [
     'steam_app_id',
     'name',
-    'short_description',
-    'detailed_description',
     'release_date',
     'estimated_owners',
     'peak_ccu',
@@ -231,16 +229,12 @@ def normalize_dataset_columns(df: pd.DataFrame) -> pd.DataFrame:
     rename_map = {source: target for source, target in COLUMN_ALIASES.items() if source in df.columns}
     normalized = df.rename(columns=rename_map).copy()
 
-    if 'about_the_game' in normalized.columns:
-        if 'short_description' not in normalized.columns:
-            normalized['short_description'] = normalized['about_the_game']
-        else:
-            normalized['short_description'] = normalized['short_description'].fillna(normalized['about_the_game'])
-
-        if 'detailed_description' not in normalized.columns:
-            normalized['detailed_description'] = normalized['about_the_game']
-        else:
-            normalized['detailed_description'] = normalized['detailed_description'].fillna(normalized['about_the_game'])
+    if 'about_the_game' not in normalized.columns:
+        normalized['about_the_game'] = None
+    if 'short_description' in normalized.columns:
+        normalized['about_the_game'] = normalized['about_the_game'].fillna(normalized['short_description'])
+    if 'detailed_description' in normalized.columns:
+        normalized['about_the_game'] = normalized['about_the_game'].fillna(normalized['detailed_description'])
 
     if 'is_free' not in normalized.columns:
         if 'price_usd' in normalized.columns:
@@ -344,15 +338,15 @@ def build_game_rows(df: pd.DataFrame) -> list[tuple[Any, ...]]:
         if is_free and price is None:
             price = Decimal('0')
 
-        about_the_game = clean_text(record.get('about_the_game'))
-        short_description = clean_text(record.get('short_description')) or about_the_game
-        detailed_description = clean_text(record.get('detailed_description')) or about_the_game
+        about_the_game = (
+            clean_text(record.get('about_the_game'))
+            or clean_text(record.get('short_description'))
+            or clean_text(record.get('detailed_description'))
+        )
 
         row = (
             int(record['steam_app_id']),
             str(record.get('name') or '').strip(),
-            short_description,
-            detailed_description,
             parse_date(record.get('release_date')),
             clean_text(record.get('estimated_owners')),
             parse_int_optional(record.get('peak_ccu')),
@@ -525,7 +519,7 @@ def refresh_search_vectors(conn: psycopg.Connection) -> None:
             UPDATE games g
             SET search_vector =
                 setweight(to_tsvector('english', COALESCE(g.name, '')), 'A') ||
-                setweight(to_tsvector('english', COALESCE(g.short_description, '')), 'B') ||
+                setweight(to_tsvector('english', COALESCE(g.about_the_game, '')), 'B') ||
                 setweight(
                     to_tsvector(
                         'english',

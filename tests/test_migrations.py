@@ -9,6 +9,8 @@ EXPECTED_SQL_SNIPPETS = [
     'CREATE TABLE collection_games',
     'CREATE OR REPLACE FUNCTION update_game_search_vector()',
     'CREATE INDEX ix_games_search_vector',
+    'CREATE EXTENSION IF NOT EXISTS vector',
+    'CREATE INDEX ix_games_embedding_ivfflat_cosine',
 ]
 
 

@@ -18,6 +18,7 @@ This separation keeps endpoint handlers thin and makes query logic testable in i
 - Developer/publisher relationship is many-to-many only (junction-table model)
 - Search uses PostgreSQL FTS (`search_vector` + rank query) with SQLite fallback for tests
 - A follow-up hardening migration restores search/filter indexes at head (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`)
+- Similar-game recommendations use pgvector cosine distance (`/games/{id}/similar`)
 - Data import is idempotent (`ON CONFLICT` strategy) and supports `seed` and `full` modes
 - Error responses use a consistent envelope for machine-friendly client handling
 
@@ -30,7 +31,6 @@ This separation keeps endpoint handlers thin and makes query logic testable in i
 
 ## Deferred Features (Intentional)
 
-- pgvector embeddings + `/games/{id}/similar`
 - MCP server exposure (`/mcp`)
 - Next.js frontend
 - Rate limiting / Redis caching

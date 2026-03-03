@@ -5,7 +5,7 @@
 | Resource Group | Endpoints |
 |---|---|
 | Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `PUT /api/v1/auth/me` |
-| Games | `GET /api/v1/games`, `GET /api/v1/games/{id}` |
+| Games | `GET /api/v1/games`, `GET /api/v1/games/{id}`, `GET /api/v1/games/{id}/similar` |
 | Search | `GET /api/v1/search` |
 | Genres | `GET /api/v1/genres`, `GET /api/v1/genres/{slug}`, `GET /api/v1/genres/{slug}/games` |
 | Tags | `GET /api/v1/tags`, `GET /api/v1/tags/{slug}`, `GET /api/v1/tags/{slug}/games` |
@@ -14,7 +14,7 @@
 | Collections | `POST /api/v1/collections`, `GET /api/v1/collections`, `GET /api/v1/collections/{id}`, `PUT /api/v1/collections/{id}`, `DELETE /api/v1/collections/{id}`, `POST /api/v1/collections/{id}/games/{game_id}`, `DELETE /api/v1/collections/{id}/games/{game_id}`, `GET /api/v1/collections/public` |
 | Analytics | `GET /api/v1/analytics/release-trends`, `GET /api/v1/analytics/top-genres`, `GET /api/v1/analytics/genre-growth`, `GET /api/v1/analytics/price-distribution`, `GET /api/v1/analytics/top-developers`, `GET /api/v1/analytics/score-by-genre`, `GET /api/v1/analytics/free-vs-paid`, `GET /api/v1/analytics/platform-breakdown`, `GET /api/v1/analytics/review-sentiment` |
 
-Total implemented endpoints: 37
+Total implemented endpoints: 38
 
 ## Coursework Criteria Mapping
 

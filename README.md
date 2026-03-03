@@ -31,7 +31,11 @@ FastAPI backend for Steam game catalog, search, taxonomy browsing, collections C
    ```bash
    python scripts/import_games.py --mode seed
    ```
-6. Run API:
+6. Generate seed embeddings (for similar-games endpoint):
+   ```bash
+   python scripts/generate_embeddings.py --mode seed --only-missing
+   ```
+7. Run API:
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -90,6 +94,7 @@ python -m pytest tests/test_analytics.py -q
 - `PUT /api/v1/auth/me`
 - `GET /api/v1/games`
 - `GET /api/v1/games/{id}`
+- `GET /api/v1/games/{id}/similar`
 - `GET /api/v1/search`
 - `GET /api/v1/genres`, `GET /api/v1/genres/{slug}`, `GET /api/v1/genres/{slug}/games`
 - `GET /api/v1/tags`, `GET /api/v1/tags/{slug}`, `GET /api/v1/tags/{slug}/games`
@@ -103,4 +108,4 @@ python -m pytest tests/test_analytics.py -q
 - Docker is required only if you use the compose Postgres path.
 - In this local environment, migrations were validated via Alembic offline SQL generation when live Postgres was unavailable.
 - Head migrations include index hardening for search/filter workloads (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`).
-- Advanced features (pgvector similarity, MCP, frontend) are intentionally deferred.
+- MCP and frontend work are intentionally deferred.

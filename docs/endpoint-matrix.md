@@ -22,7 +22,7 @@ Total implemented endpoints: 40
 | Criterion | Implemented Evidence |
 |---|---|
 | CRUD operations | Full CRUD on collections + membership add/remove |
-| 4+ endpoints | 38 endpoints across 9 resource groups |
+| 4+ endpoints | 40 endpoints across 10 resource groups (38 REST/OpenAPI + 2 MCP transport endpoints) |
 | SQL database usage | PostgreSQL schema with normalized dimensions + junction tables |
 | JSON + status codes | Consistent response/error envelopes and explicit status handling |
 | Authentication | JWT bearer auth, protected routes, ownership checks |

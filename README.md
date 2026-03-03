@@ -57,12 +57,12 @@ Health: `http://localhost:8000/api/v1/health`
 
 Committed seed dataset:
 
-- `data/seed/steam_games_seed.csv` (350 rows)
+- `data/seed/steam_game_seed_1000_2.csv` (1000 rows)
 
 Regenerate seed from your full Kaggle CSV:
 
 ```bash
-python scripts/create_seed_sample.py --input "<path-to-full-kaggle-csv>" --output data/seed/steam_games_seed.csv --size 350 --seed 42
+python scripts/generate_seed_from_dataset.py --n 1000 --seed 42 --out data/seed/steam_game_seed_1000_2.csv
 ```
 
 Import modes:
@@ -129,6 +129,7 @@ python -m pytest tests/test_analytics.py -q
 - Exposure is intentionally read-only by tag allowlist:
   - `health`, `games`, `search`, `genres`, `tags`, `developers`, `publishers`, `analytics`
 - Auth and collections write flows are excluded from MCP tool exposure.
+- VS Code Copilot MCP config is provided in `.vscode/mcp.json` (URL: `http://127.0.0.1:8000/mcp`).
 
 ## Notes
 

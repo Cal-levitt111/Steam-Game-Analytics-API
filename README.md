@@ -53,6 +53,22 @@ docker compose up -d db
 Docs: `http://localhost:8000/docs`  
 Health: `http://localhost:8000/api/v1/health`
 
+## Transport Security (Production)
+
+Configure these settings when deploying behind TLS termination:
+
+- `FORCE_HTTPS=true`
+- `ALLOWED_HOSTS=api.example.com`
+- `TRUSTED_PROXY_CIDRS=<load-balancer-cidr-list>`
+- `HSTS_MAX_AGE_SECONDS=63072000`
+
+Deployment requirements:
+
+- Ingress/reverse proxy must terminate TLS and forward `X-Forwarded-Proto`.
+- Only trusted proxy CIDRs should be listed, otherwise forwarded headers are ignored.
+- Requests over plain HTTP are redirected to HTTPS (`307`) when `FORCE_HTTPS=true`.
+- HSTS is only emitted for requests treated as HTTPS.
+
 ## Data Workflow
 
 Committed seed dataset:

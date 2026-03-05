@@ -1,7 +1,8 @@
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -18,8 +19,8 @@ class Settings(BaseSettings):
     embedding_dim: int = Field(default=384, alias='EMBEDDING_DIM')
     embedding_batch_size: int = Field(default=64, alias='EMBEDDING_BATCH_SIZE')
     force_https: bool = Field(default=False, alias='FORCE_HTTPS')
-    allowed_hosts: list[str] = Field(default_factory=list, alias='ALLOWED_HOSTS')
-    trusted_proxy_cidrs: list[str] = Field(default_factory=list, alias='TRUSTED_PROXY_CIDRS')
+    allowed_hosts: Annotated[list[str], NoDecode] = Field(default_factory=list, alias='ALLOWED_HOSTS')
+    trusted_proxy_cidrs: Annotated[list[str], NoDecode] = Field(default_factory=list, alias='TRUSTED_PROXY_CIDRS')
     hsts_max_age_seconds: int = Field(default=63072000, alias='HSTS_MAX_AGE_SECONDS')
     enable_mcp_server: bool = Field(default=True, alias='ENABLE_MCP_SERVER')
     mcp_mount_path: str = Field(default='/mcp', alias='MCP_MOUNT_PATH')

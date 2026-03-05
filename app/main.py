@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi_mcp import FastApiMCP
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core import settings
 from app.core.error_handlers import register_exception_handlers
+from app.core.transport_security import HTTPSRedirectMiddleware, SecurityHeadersMiddleware
 from app.routers.analytics import router as analytics_router
 from app.routers.auth import router as auth_router
 from app.routers.collections import router as collections_router
@@ -28,6 +30,18 @@ MCP_READONLY_TAGS = [
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, version=settings.app_version)
+    if settings.allowed_hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        trusted_proxy_cidrs=tuple(settings.trusted_proxy_cidrs),
+        hsts_max_age_seconds=settings.hsts_max_age_seconds,
+    )
+    app.add_middleware(
+        HTTPSRedirectMiddleware,
+        force_https=settings.force_https,
+        trusted_proxy_cidrs=tuple(settings.trusted_proxy_cidrs),
+    )
     register_exception_handlers(app)
     app.include_router(health_router, prefix=settings.api_prefix)
     app.include_router(auth_router, prefix=settings.api_prefix)

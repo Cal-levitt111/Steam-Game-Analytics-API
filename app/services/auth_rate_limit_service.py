@@ -75,20 +75,24 @@ def _assert_scope_not_blocked(db: Session, *, scope: str, identifier: str) -> No
     if counter is None:
         return
 
+    blocked_until = _as_utc(counter.blocked_until) if counter.blocked_until else None
+    window_started_at = _as_utc(counter.window_started_at)
+
     changed = False
-    if counter.blocked_until and counter.blocked_until <= now:
+    if blocked_until and blocked_until <= now:
         _reset_counter_window(counter, now)
         changed = True
-    elif now - counter.window_started_at >= timedelta(seconds=settings.auth_rate_limit_window_seconds):
+    elif now - window_started_at >= timedelta(seconds=settings.auth_rate_limit_window_seconds):
         _reset_counter_window(counter, now)
         changed = True
 
     if changed:
         save_counter(db, counter, now=now)
         db.commit()
+        blocked_until = _as_utc(counter.blocked_until) if counter.blocked_until else None
 
-    if counter.blocked_until and counter.blocked_until > now:
-        retry_after_seconds = max(1, int((counter.blocked_until - now).total_seconds()))
+    if blocked_until and blocked_until > now:
+        retry_after_seconds = max(1, int((blocked_until - now).total_seconds()))
         raise _too_many_attempts_exception(retry_after_seconds)
 
 
@@ -103,14 +107,16 @@ def _record_attempt(db: Session, *, scope: str, identifier: str, max_attempts: i
             now=now,
         )
 
-    if counter.blocked_until and counter.blocked_until > now:
-        retry_after_seconds = max(1, int((counter.blocked_until - now).total_seconds()))
-        db.rollback()
+    blocked_until = _as_utc(counter.blocked_until) if counter.blocked_until else None
+    window_started_at = _as_utc(counter.window_started_at)
+
+    if blocked_until and blocked_until > now:
+        retry_after_seconds = max(1, int((blocked_until - now).total_seconds()))
         return retry_after_seconds
 
-    if counter.blocked_until and counter.blocked_until <= now:
+    if blocked_until and blocked_until <= now:
         _reset_counter_window(counter, now)
-    elif now - counter.window_started_at >= timedelta(seconds=settings.auth_rate_limit_window_seconds):
+    elif now - window_started_at >= timedelta(seconds=settings.auth_rate_limit_window_seconds):
         _reset_counter_window(counter, now)
 
     counter.attempt_count += 1
@@ -144,3 +150,9 @@ def _too_many_attempts_exception(retry_after_seconds: int) -> AppException:
         'Too many authentication attempts. Please retry later.',
         headers={'Retry-After': str(retry_after_seconds)},
     )
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

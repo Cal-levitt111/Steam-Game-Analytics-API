@@ -49,3 +49,28 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
             https_url = request.url.replace(scheme='https')
             return RedirectResponse(url=str(https_url), status_code=307)
         return await call_next(request)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    def __init__(
+        self,
+        app,
+        *,
+        trusted_proxy_cidrs: tuple[str, ...],
+        hsts_max_age_seconds: int,
+    ):
+        super().__init__(app)
+        self.trusted_proxy_cidrs = trusted_proxy_cidrs
+        self.hsts_max_age_seconds = hsts_max_age_seconds
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        if self.hsts_max_age_seconds > 0 and effective_request_scheme(request, self.trusted_proxy_cidrs) == 'https':
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                f'max-age={self.hsts_max_age_seconds}; includeSubDomains; preload',
+            )
+        return response

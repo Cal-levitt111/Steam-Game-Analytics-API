@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.main import app
+from app.models.auth_rate_limit import AuthRateLimitCounter
 from app.models.user import User
 
 
@@ -17,6 +18,7 @@ def client() -> TestClient:
         poolclass=StaticPool,
     )
     User.__table__.create(bind=engine)
+    AuthRateLimitCounter.__table__.create(bind=engine)
     testing_session_local = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
 
     def override_get_db():

@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.main import app
+from app.models.auth_rate_limit import AuthRateLimitCounter
 from app.models.collection import Collection, collection_games
 from app.models.user import User
 
@@ -15,6 +16,7 @@ def collections_client() -> tuple[TestClient, sessionmaker[Session]]:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
 
     User.__table__.create(bind=engine)
+    AuthRateLimitCounter.__table__.create(bind=engine)
     Collection.__table__.create(bind=engine)
     with engine.begin() as conn:
         conn.execute(

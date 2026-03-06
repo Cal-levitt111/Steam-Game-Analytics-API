@@ -90,9 +90,24 @@ def create_access_token(subject: str, expires_delta_minutes: int | None = None) 
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
+    now = datetime.now(UTC)
     try:
         header = jwt.get_unverified_header(token)
-        if header.get('alg') != JWT_ALGORITHM:
+        algorithm = header.get('alg')
+        if algorithm == LEGACY_HS256_ALGORITHM:
+            if _legacy_hs256_is_allowed(now):
+                return jwt.decode(
+                    token,
+                    settings.secret_key,
+                    algorithms=[LEGACY_HS256_ALGORITHM],
+                    options={
+                        'verify_iss': False,
+                        'verify_aud': False,
+                        'leeway': settings.jwt_clock_skew_seconds,
+                    },
+                )
+            raise ValueError('TOKEN_INVALID')
+        if algorithm != JWT_ALGORITHM:
             raise ValueError('TOKEN_INVALID')
         kid = header.get('kid')
         if not isinstance(kid, str) or not kid:
@@ -115,6 +130,13 @@ def decode_access_token(token: str) -> dict[str, Any]:
         raise ValueError('TOKEN_EXPIRED') from exc
     except JWTError as exc:
         raise ValueError('TOKEN_INVALID') from exc
+
+
+def _legacy_hs256_is_allowed(now: datetime) -> bool:
+    cutoff = settings.jwt_accept_legacy_hs256_until
+    if cutoff is None:
+        return False
+    return now <= _as_utc(cutoff)
 
 
 def get_public_key_ring() -> dict[str, str]:
@@ -173,3 +195,9 @@ def _int_to_base64url(value: int) -> str:
     byte_length = max(1, (value.bit_length() + 7) // 8)
     raw = value.to_bytes(byte_length, byteorder='big')
     return base64.urlsafe_b64encode(raw).decode('utf-8').rstrip('=')
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

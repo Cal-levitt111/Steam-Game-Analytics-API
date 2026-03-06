@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import lru_cache
 from typing import Annotated
 
@@ -28,6 +29,14 @@ class Settings(BaseSettings):
     auth_rate_limit_login_email_max_attempts: int = Field(default=5, alias='AUTH_RATE_LIMIT_LOGIN_EMAIL_MAX_ATTEMPTS')
     auth_rate_limit_login_ip_max_attempts: int = Field(default=20, alias='AUTH_RATE_LIMIT_LOGIN_IP_MAX_ATTEMPTS')
     auth_rate_limit_register_ip_max_attempts: int = Field(default=10, alias='AUTH_RATE_LIMIT_REGISTER_IP_MAX_ATTEMPTS')
+    jwt_issuer: str = Field(default='steam-games-analytics-api', alias='JWT_ISSUER')
+    jwt_audience: str = Field(default='steam-games-analytics-clients', alias='JWT_AUDIENCE')
+    jwt_active_kid: str = Field(default='dev-rs256-1', alias='JWT_ACTIVE_KID')
+    jwt_active_private_key: str = Field(default='', alias='JWT_ACTIVE_PRIVATE_KEY')
+    jwt_active_public_key: str = Field(default='', alias='JWT_ACTIVE_PUBLIC_KEY')
+    jwt_additional_public_keys: dict[str, str] = Field(default_factory=dict, alias='JWT_ADDITIONAL_PUBLIC_KEYS')
+    jwt_clock_skew_seconds: int = Field(default=60, alias='JWT_CLOCK_SKEW_SECONDS')
+    jwt_accept_legacy_hs256_until: datetime | None = Field(default=None, alias='JWT_ACCEPT_LEGACY_HS256_UNTIL')
     enable_mcp_server: bool = Field(default=True, alias='ENABLE_MCP_SERVER')
     mcp_mount_path: str = Field(default='/mcp', alias='MCP_MOUNT_PATH')
 

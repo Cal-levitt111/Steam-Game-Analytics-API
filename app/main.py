@@ -12,6 +12,7 @@ from app.routers.developers import router as developers_router
 from app.routers.games import router as games_router
 from app.routers.genres import router as genres_router
 from app.routers.health import router as health_router
+from app.routers.jwks import router as jwks_router
 from app.routers.publishers import router as publishers_router
 from app.routers.search import router as search_router
 from app.routers.tags import router as tags_router
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     )
     register_exception_handlers(app)
     app.include_router(health_router, prefix=settings.api_prefix)
+    app.include_router(jwks_router)
     app.include_router(auth_router, prefix=settings.api_prefix)
     app.include_router(games_router, prefix=settings.api_prefix)
     app.include_router(search_router, prefix=settings.api_prefix)

@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     allowed_hosts: Annotated[list[str], NoDecode] = Field(default_factory=list, alias='ALLOWED_HOSTS')
     trusted_proxy_cidrs: Annotated[list[str], NoDecode] = Field(default_factory=list, alias='TRUSTED_PROXY_CIDRS')
     hsts_max_age_seconds: int = Field(default=63072000, alias='HSTS_MAX_AGE_SECONDS')
+    auth_rate_limit_enabled: bool = Field(default=True, alias='AUTH_RATE_LIMIT_ENABLED')
+    auth_rate_limit_window_seconds: int = Field(default=900, alias='AUTH_RATE_LIMIT_WINDOW_SECONDS')
+    auth_rate_limit_block_seconds: int = Field(default=900, alias='AUTH_RATE_LIMIT_BLOCK_SECONDS')
+    auth_rate_limit_login_email_max_attempts: int = Field(default=5, alias='AUTH_RATE_LIMIT_LOGIN_EMAIL_MAX_ATTEMPTS')
+    auth_rate_limit_login_ip_max_attempts: int = Field(default=20, alias='AUTH_RATE_LIMIT_LOGIN_IP_MAX_ATTEMPTS')
+    auth_rate_limit_register_ip_max_attempts: int = Field(default=10, alias='AUTH_RATE_LIMIT_REGISTER_IP_MAX_ATTEMPTS')
     enable_mcp_server: bool = Field(default=True, alias='ENABLE_MCP_SERVER')
     mcp_mount_path: str = Field(default='/mcp', alias='MCP_MOUNT_PATH')
 

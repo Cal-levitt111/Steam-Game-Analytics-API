@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
@@ -11,15 +11,26 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 
 @router.post('/register', response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, response: Response, db: Session = Depends(get_db)) -> UserRead:
-    user = register_user(db, email=payload.email, password=payload.password, display_name=payload.display_name)
+def register(payload: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)) -> UserRead:
+    user = register_user(
+        db,
+        email=payload.email,
+        password=payload.password,
+        display_name=payload.display_name,
+        client_ip=request.client.host if request.client else None,
+    )
     response.headers['Location'] = f'/api/v1/auth/users/{user.id}'
     return UserRead.model_validate(user)
 
 
 @router.post('/login', response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    _, token = login_user(db, email=payload.email, password=payload.password)
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+    _, token = login_user(
+        db,
+        email=payload.email,
+        password=payload.password,
+        client_ip=request.client.host if request.client else None,
+    )
     return TokenResponse(access_token=token)
 
 

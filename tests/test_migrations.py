@@ -11,6 +11,8 @@ EXPECTED_SQL_SNIPPETS = [
     'CREATE INDEX ix_games_search_vector',
     'CREATE EXTENSION IF NOT EXISTS vector',
     'CREATE INDEX ix_games_embedding_ivfflat_cosine',
+    'CREATE TABLE auth_rate_limit_counters',
+    'CREATE INDEX ix_auth_rate_limit_counters_blocked_until',
 ]
 
 

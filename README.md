@@ -69,6 +69,22 @@ Deployment requirements:
 - Requests over plain HTTP are redirected to HTTPS (`307`) when `FORCE_HTTPS=true`.
 - HSTS is only emitted for requests treated as HTTPS.
 
+## Auth Rate Limiting
+
+Auth endpoints are protected with database-backed counters:
+
+- `POST /api/v1/auth/login` is limited by both email and client IP.
+- `POST /api/v1/auth/register` is limited by client IP.
+- Blocked requests return `429 TOO_MANY_REQUESTS` with `Retry-After`.
+
+Tuning settings:
+
+- `AUTH_RATE_LIMIT_WINDOW_SECONDS`
+- `AUTH_RATE_LIMIT_BLOCK_SECONDS`
+- `AUTH_RATE_LIMIT_LOGIN_EMAIL_MAX_ATTEMPTS`
+- `AUTH_RATE_LIMIT_LOGIN_IP_MAX_ATTEMPTS`
+- `AUTH_RATE_LIMIT_REGISTER_IP_MAX_ATTEMPTS`
+
 ## Data Workflow
 
 Committed seed dataset:

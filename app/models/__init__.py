@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.auth_rate_limit import AuthRateLimitCounter
 from app.models.collection import Collection, collection_games
 from app.models.game import (
     Category,
@@ -17,6 +18,7 @@ from app.models.user import User
 
 __all__ = [
     'Base',
+    'AuthRateLimitCounter',
     'Game',
     'Developer',
     'Publisher',

@@ -85,6 +85,25 @@ Tuning settings:
 - `AUTH_RATE_LIMIT_LOGIN_IP_MAX_ATTEMPTS`
 - `AUTH_RATE_LIMIT_REGISTER_IP_MAX_ATTEMPTS`
 
+## JWT Signing And Rotation
+
+JWT access tokens are signed with RS256 and include a key ID (`kid`) header.
+
+- Active signing key is selected via `JWT_ACTIVE_KID`.
+- Public keys are exposed at `GET /.well-known/jwks.json`.
+- Previous verification keys can be loaded via `JWT_ADDITIONAL_PUBLIC_KEYS`.
+- Legacy HS256 verification can be temporarily enabled with `JWT_ACCEPT_LEGACY_HS256_UNTIL`.
+
+Core settings:
+
+- `JWT_ISSUER`
+- `JWT_AUDIENCE`
+- `JWT_ACTIVE_KID`
+- `JWT_ACTIVE_PRIVATE_KEY`
+- `JWT_ACTIVE_PUBLIC_KEY`
+- `JWT_ADDITIONAL_PUBLIC_KEYS`
+- `JWT_CLOCK_SKEW_SECONDS`
+
 ## Data Workflow
 
 Committed seed dataset:
@@ -134,6 +153,7 @@ python -m pytest tests/test_analytics.py -q
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
 - `PUT /api/v1/auth/me`
+- `GET /.well-known/jwks.json`
 - `GET /api/v1/games`
 - `GET /api/v1/games/{id}`
 - `GET /api/v1/games/{id}/similar`

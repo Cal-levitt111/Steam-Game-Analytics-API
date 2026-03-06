@@ -21,6 +21,7 @@ This separation keeps endpoint handlers thin and makes query logic testable in i
 - Similar-game recommendations use pgvector cosine distance (`/games/{id}/similar`)
 - Embeddings are generated offline via `scripts/generate_embeddings.py` and stored in `games.embedding`
 - MCP server is mounted at `/mcp` using `fastapi-mcp`, with read-only tag allowlisting
+- JWT access tokens use RS256 with `kid` headers and JWKS exposure at `/.well-known/jwks.json`
 - Data import is idempotent (`ON CONFLICT` strategy) and supports `seed` and `full` modes
 - Error responses use a consistent envelope for machine-friendly client handling
 

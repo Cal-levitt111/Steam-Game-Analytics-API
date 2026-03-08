@@ -104,6 +104,18 @@ Core settings:
 - `JWT_ADDITIONAL_PUBLIC_KEYS`
 - `JWT_CLOCK_SKEW_SECONDS`
 
+## Production Startup Guards
+
+When `ENVIRONMENT=production`, the app now refuses to start unless:
+
+- `FORCE_HTTPS=true`
+- `ALLOWED_HOSTS` is set
+- `SECRET_KEY` is not the placeholder value
+- `JWT_ACTIVE_PRIVATE_KEY` is configured
+- `JWT_ACTIVE_PUBLIC_KEY` is configured
+
+See [docs/production-security-checklist.md](docs/production-security-checklist.md) for the deployment checklist.
+
 ## Data Workflow
 
 Committed seed dataset:

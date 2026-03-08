@@ -1,5 +1,6 @@
 import base64
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 import hashlib
 import hmac
 import os
@@ -16,34 +17,6 @@ from app.core.config import settings
 JWT_ALGORITHM = 'RS256'
 LEGACY_HS256_ALGORITHM = 'HS256'
 PBKDF2_ITERATIONS = 390000
-DEV_FALLBACK_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDy7eCwsLoqDnXo
-T0rHQmqTimPszikhpCRtHPlc+vbem/dK6bJul5xuIVXHdHinHmRatiJf/x182az3
-8d7Xrs6/lB5vNy75FyuUsWWqepj6u34hVmP5qKL9IlZcu21sskQrxlC5je9sNscl
-+huG5kzarCxI9VXzzbwusX0do5E62VbuZFOsadglFTiMuLqK+ht4bAkYNIXCsw8P
-BgRzB+7d2GV8PPyb4SoRUVm24q/fU/ZweDvMUzj6rw7w2h76Wb3ueCYmADIxNO0a
-z/T+Kh9AtHgNKZHvEHIdNf19esLGBJ8+s82miXkDCdoQsMzIYuYdmZvVTT5O2OuU
-Jgs73LobAgMBAAECggEACcAniSAG0OJUtDbeiwHs8jAXU61wtDN47NJBZgyCtSuw
-cNbRfSPjuP3oigFwSFDteUCfP5gnUFgSW79fEOwoy0LAN/mQjpnx+11ldcLG+iVl
-aiQkDiTJKfzjV4SEX10GZHVozxHV3tOSCcGwsijzQ8GuY11JjmgfGgawvWxPy3tS
-vtI1yabGP5wRKz/Q2xQFHr1pcrK9gNCPAvyfg8ZpyeyxzfO+P9h34zGh0l9E/jvd
-4Mc/vDgL97gNpU3Gu74XmOlb7gxPYPYpMXwC0vJswTQW1dLlC+NWGnY8RJz8LG9K
-ANmrSD8JSHYxwRMk7yh0pIn6T7+joyK1EknjAO8IHQKBgQD9dYyQl7fxWQCe19E6
-ZT+ylonrnmu2hMc9GFEkHOdnDz1KEeNXA5bAJPCanaBXH2LfLR0ytJ2dipZAXtqH
-a47Qr3JmXxEBzE6xNq3w9OTY4zJuAlAkaK36NXNw6PLafVAmbHXrWRf9pTrdLu3d
-G/6GihNL74QpW0e66Ic73u8zVQKBgQD1XU49CUD4tyBAbvs/DPjrHqgLp8xkCeXN
-oOfroq0aVoPG1IWEvaPs5nCCwonK59tHw1GkkHS5rbLHuSDro+2WlRssyM8ILLF4
-s7JDM28/r7W2WxE0a1dTeoi3/+YVyfMN/8VKr7SUxGLLtYoZvB62MQZyw8bnO6XN
-Qi2lrcwXrwKBgG/+JtQlFdQAvbNyLTMeVdz1g4+m+nU1ikvGmOPaGa2CIFTAPrHO
-FihkqiPHjnewmKGAb6xd/l8EQ4vB3dGEhyBSxbvSOdOPkR3gyU71BsGG8luFjh/o
-WSd7wrybUeOVB3tS5W/OeDlNbwsYl2Xh3r9X91rQRJd5i+JcqJSd1xfZAoGAIWv/
-P0MmbXqMUxqK8LC0q1o2q7fEmI/clKDpVmiHScIlGw1Rzp4CWT+ebcFQAaqJbQIG
-+fKPY8dsRdZKzK48q7lNxVDpGoTz+6wGiS7VZYhqqRdIhaplb8KOIvohfjBPAkYn
-up+qamVBy9vDnvPH/ys4ZKOUUWUHlakBDMNavJMCgYEAypWSdVTvRWJG1aJFu59f
-nHVpqFGuLqnwJiqDOuAq6xNUnuK6NCaJ7SRloj+mwkvOOiO6L/KSaP4x0gXXV99M
-s8RxBuel76U6mxDFJ4CSGaQcKw/G3hDzxN01v7H6rVRdSr2rQsx5GGnLbFQ+1ZU2
-gLFydJO9twM17t4kDU8DsYM=
------END PRIVATE KEY-----"""
 
 
 def _b64_encode(raw: bytes) -> str:
@@ -157,7 +130,7 @@ def _get_active_private_key() -> str:
     configured = settings.jwt_active_private_key.strip()
     if configured:
         return configured
-    return DEV_FALLBACK_PRIVATE_KEY
+    return _get_development_private_key()
 
 
 def _get_active_public_key() -> str:
@@ -165,6 +138,16 @@ def _get_active_public_key() -> str:
     if configured:
         return configured
     return _derive_public_key_pem(_get_active_private_key())
+
+
+@lru_cache
+def _get_development_private_key() -> str:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode('utf-8')
 
 
 def _derive_public_key_pem(private_key_pem: str) -> str:

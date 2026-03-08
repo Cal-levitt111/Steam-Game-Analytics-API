@@ -5,6 +5,7 @@
 | Resource Group | Endpoints |
 |---|---|
 | Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `PUT /api/v1/auth/me` |
+| JWKS | `GET /.well-known/jwks.json` |
 | Games | `GET /api/v1/games`, `GET /api/v1/games/{id}`, `GET /api/v1/games/{id}/similar` |
 | Search | `GET /api/v1/search` |
 | Genres | `GET /api/v1/genres`, `GET /api/v1/genres/{slug}`, `GET /api/v1/genres/{slug}/games` |
@@ -15,14 +16,14 @@
 | Analytics | `GET /api/v1/analytics/release-trends`, `GET /api/v1/analytics/top-genres`, `GET /api/v1/analytics/genre-growth`, `GET /api/v1/analytics/price-distribution`, `GET /api/v1/analytics/top-developers`, `GET /api/v1/analytics/score-by-genre`, `GET /api/v1/analytics/free-vs-paid`, `GET /api/v1/analytics/platform-breakdown`, `GET /api/v1/analytics/review-sentiment` |
 | MCP | `GET /mcp`, `POST /mcp/messages/` (mounted tool protocol endpoint with read-only tag exposure) |
 
-Total implemented endpoints: 40
+Total implemented endpoints: 41
 
 ## Coursework Criteria Mapping
 
 | Criterion | Implemented Evidence |
 |---|---|
 | CRUD operations | Full CRUD on collections + membership add/remove |
-| 4+ endpoints | 40 endpoints across 10 resource groups (38 REST/OpenAPI + 2 MCP transport endpoints) |
+| 4+ endpoints | 41 endpoints across 11 resource groups (39 REST/OpenAPI + 2 MCP transport endpoints) |
 | SQL database usage | PostgreSQL schema with normalized dimensions + junction tables |
 | JSON + status codes | Consistent response/error envelopes and explicit status handling |
 | Authentication | JWT bearer auth, protected routes, ownership checks |

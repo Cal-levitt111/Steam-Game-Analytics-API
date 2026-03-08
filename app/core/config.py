@@ -2,7 +2,7 @@ from datetime import datetime
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -50,6 +50,43 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(',') if item.strip()]
         return value
+
+    @field_validator('jwt_active_private_key', 'jwt_active_public_key', mode='before')
+    @classmethod
+    def _normalize_pem_value(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.replace('\\n', '\n').strip()
+        return value
+
+    @field_validator('jwt_additional_public_keys', mode='after')
+    @classmethod
+    def _normalize_public_key_ring(cls, value: dict[str, str], _: ValidationInfo) -> dict[str, str]:
+        return {kid.strip(): key.replace('\\n', '\n').strip() for kid, key in value.items() if kid.strip() and key.strip()}
+
+
+def is_production_environment(current_settings: Settings) -> bool:
+    return current_settings.environment.strip().lower() == 'production'
+
+
+def validate_runtime_settings(current_settings: Settings) -> None:
+    if not is_production_environment(current_settings):
+        return
+
+    failures: list[str] = []
+    if not current_settings.force_https:
+        failures.append('FORCE_HTTPS must be true in production.')
+    if not current_settings.allowed_hosts:
+        failures.append('ALLOWED_HOSTS must be configured in production.')
+    if current_settings.secret_key.strip() in {'', 'change-me-in-production'}:
+        failures.append('SECRET_KEY must not use the development placeholder in production.')
+    if not current_settings.jwt_active_private_key:
+        failures.append('JWT_ACTIVE_PRIVATE_KEY must be configured in production.')
+    if not current_settings.jwt_active_public_key:
+        failures.append('JWT_ACTIVE_PUBLIC_KEY must be configured in production.')
+
+    if failures:
+        joined = ' '.join(failures)
+        raise RuntimeError(f'Invalid production security configuration. {joined}')
 
 
 @lru_cache

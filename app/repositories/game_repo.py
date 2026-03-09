@@ -209,51 +209,23 @@ def search_games(
     offset = (page - 1) * per_page
 
     if db.bind and db.bind.dialect.name == 'postgresql':
-        where_sql = ["g.search_vector @@ websearch_to_tsquery('english', :q)"]
-        params: dict[str, object] = {
-            'q': q,
-            'limit': per_page,
-            'offset': offset,
-        }
+        ts_query = func.websearch_to_tsquery('english', q)
+        rank = func.ts_rank(Game.search_vector, ts_query).label('rank')
+        stmt = select(Game.id, rank).where(Game.search_vector.op('@@')(ts_query))
 
         if genre is not None:
-            where_sql.append(
-                "EXISTS (SELECT 1 FROM game_genres gg JOIN genres ge ON ge.id = gg.genre_id WHERE gg.game_id = g.id AND ge.slug = :genre)"
-            )
-            params['genre'] = genre
+            stmt = stmt.where(Game.genres.any(Genre.slug == genre))
         if tag is not None:
-            where_sql.append(
-                "EXISTS (SELECT 1 FROM game_tags gt JOIN tags t ON t.id = gt.tag_id WHERE gt.game_id = g.id AND t.slug = :tag)"
-            )
-            params['tag'] = tag
+            stmt = stmt.where(Game.tags.any(Tag.slug == tag))
         if is_free is not None:
-            where_sql.append("g.is_free = :is_free")
-            params['is_free'] = is_free
+            stmt = stmt.where(Game.is_free.is_(is_free))
         if min_score is not None:
-            where_sql.append("g.metacritic_score >= :min_score")
-            params['min_score'] = min_score
+            stmt = stmt.where(Game.metacritic_score >= min_score)
 
-        count_sql = text(
-            f"""
-            SELECT COUNT(*)
-            FROM games g
-            WHERE {' AND '.join(where_sql)}
-            """
-        )
-        total = int(db.execute(count_sql, params).scalar() or 0)
+        count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
+        total = int(db.scalar(count_stmt) or 0)
 
-        search_sql = text(
-            f"""
-            SELECT
-                g.id,
-                ts_rank(g.search_vector, websearch_to_tsquery('english', :q)) AS rank
-            FROM games g
-            WHERE {' AND '.join(where_sql)}
-            ORDER BY rank DESC, g.id ASC
-            LIMIT :limit OFFSET :offset
-            """
-        )
-        rows = db.execute(search_sql, params).all()
+        rows = db.execute(stmt.order_by(desc(rank), Game.id.asc()).offset(offset).limit(per_page)).all()
         ordered_ids = [int(row[0]) for row in rows]
         rank_map = {int(row[0]): float(row[1]) if row[1] is not None else None for row in rows}
         games = _load_games_by_ids(db, ordered_ids)

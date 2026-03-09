@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f3ea;
+  --background-alt: #efe6d8;
+  --surface: rgba(15, 23, 42, 0.82);
+  --surface-soft: rgba(255, 255, 255, 0.72);
+  --card: rgba(255, 251, 245, 0.9);
+  --foreground: #102033;
+  --muted: #5c6a7b;
+  --border: rgba(16, 32, 51, 0.12);
+  --ring: rgba(30, 139, 131, 0.3);
+  --primary: #0f3d5e;
+  --primary-foreground: #f4f8fb;
+  --accent: #3cb6a2;
+  --accent-foreground: #052c28;
+  --accent-alt: #d8f163;
+  --danger: #b64235;
+  --shadow-lg: 0 28px 90px rgba(13, 31, 46, 0.18);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-card: var(--card);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-alt: var(--accent-alt);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --shadow-lg: var(--shadow-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(216, 241, 99, 0.4), transparent 30%),
+    radial-gradient(circle at 85% 15%, rgba(60, 182, 162, 0.3), transparent 25%),
+    linear-gradient(180deg, #fffaf2 0%, #f7f3ea 45%, #f0e6d8 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(60, 182, 162, 0.25);
+}
+
+.page-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.page-frame::before {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  content: "";
+  background-image:
+    linear-gradient(rgba(16, 32, 51, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 32, 51, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent);
+}
+
+.page-frame::after {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.55), transparent 28%),
+    radial-gradient(circle at 80% 0%, rgba(216, 241, 99, 0.2), transparent 25%),
+    radial-gradient(circle at 100% 100%, rgba(15, 61, 94, 0.18), transparent 22%);
+  pointer-events: none;
+}
+
+.glass-panel {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.85s 0.12s ease-out both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

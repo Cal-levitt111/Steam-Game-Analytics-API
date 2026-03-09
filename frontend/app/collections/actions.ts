@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { createCollection } from "@/lib/api/collections";
+import {
+  addGameToCollection,
+  createCollection,
+  removeGameFromCollection,
+} from "@/lib/api/collections";
 import { isApiError } from "@/lib/api/client";
 import { requireSession } from "@/lib/auth/guards";
 
@@ -20,6 +24,11 @@ const createCollectionSchema = z.object({
 
 export type CreateCollectionState = {
   error?: string;
+};
+
+export type CollectionMembershipState = {
+  error?: string;
+  success?: string;
 };
 
 export async function createCollectionAction(
@@ -59,4 +68,56 @@ export async function createCollectionAction(
 
     return { error: "The collection could not be created." };
   }
+}
+
+const membershipSchema = z.object({
+  collection_id: z.coerce.number().int().positive(),
+  game_id: z.coerce.number().int().positive(),
+});
+
+export async function addGameToCollectionAction(
+  _: CollectionMembershipState,
+  formData: FormData,
+): Promise<CollectionMembershipState> {
+  const parsed = membershipSchema.safeParse({
+    collection_id: formData.get("collection_id"),
+    game_id: formData.get("game_id"),
+  });
+
+  if (!parsed.success) {
+    return { error: "Choose a valid collection before adding the game." };
+  }
+
+  const { token } = await requireSession();
+
+  try {
+    await addGameToCollection(token, parsed.data.collection_id, parsed.data.game_id);
+    revalidatePath("/collections");
+    revalidatePath(`/collections/${parsed.data.collection_id}`);
+    revalidatePath(`/games/${parsed.data.game_id}`);
+    return { success: "Game added to collection." };
+  } catch (error) {
+    if (isApiError(error)) {
+      return { error: error.payload.message };
+    }
+
+    return { error: "The game could not be added to the collection." };
+  }
+}
+
+export async function removeGameFromCollectionAction(formData: FormData) {
+  const parsed = membershipSchema.safeParse({
+    collection_id: formData.get("collection_id"),
+    game_id: formData.get("game_id"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const { token } = await requireSession();
+  await removeGameFromCollection(token, parsed.data.collection_id, parsed.data.game_id);
+  revalidatePath("/collections");
+  revalidatePath(`/collections/${parsed.data.collection_id}`);
+  redirect(`/collections/${parsed.data.collection_id}`);
 }

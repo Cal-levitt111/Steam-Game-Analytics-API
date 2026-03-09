@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { removeGameFromCollectionAction } from "@/app/collections/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,17 +54,27 @@ export default async function CollectionDetailPage({
         {collection.games.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {collection.games.map((game) => (
-              <Link key={game.id} href={`/games/${game.id}`}>
-                <Card className="h-full transition hover:-translate-y-1 hover:border-accent/50">
-                  <CardHeader>
-                    <CardTitle>{game.name}</CardTitle>
-                    <CardDescription>Steam App #{game.steam_app_id}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted">
-                    Open the detail page to inspect similarity and add-to-collection actions.
-                  </CardContent>
-                </Card>
-              </Link>
+              <Card key={game.id} className="h-full transition hover:-translate-y-1 hover:border-accent/50">
+                <CardHeader>
+                  <CardTitle>{game.name}</CardTitle>
+                  <CardDescription>Steam App #{game.steam_app_id}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted">
+                  <p>Open the detail page to inspect similarity and add-to-collection actions.</p>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/games/${game.id}`}>Open game</Link>
+                  </Button>
+                  {isOwner ? (
+                    <form action={removeGameFromCollectionAction}>
+                      <input name="collection_id" type="hidden" value={collection.id} />
+                      <input name="game_id" type="hidden" value={game.id} />
+                      <Button size="sm" type="submit" variant="danger">
+                        Remove from collection
+                      </Button>
+                    </form>
+                  ) : null}
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (

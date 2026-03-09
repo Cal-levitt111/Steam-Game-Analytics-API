@@ -3,13 +3,16 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { ExternalLink, Layers3, Sparkles } from "lucide-react";
 
+import { AddToCollectionForm } from "@/components/collections/add-to-collection-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { listMyCollections } from "@/lib/api/collections";
 import { getGame, getSimilarGames } from "@/lib/api/games";
 import { ApiError, isApiError } from "@/lib/api/client";
+import { getSessionToken, getSessionUser } from "@/lib/auth/session";
 import { formatCompactNumber, formatCurrency } from "@/lib/formatters";
 
 function stripHtml(value: string | null) {
@@ -110,6 +113,11 @@ export default async function GameDetailPage({
   }
 
   const screenshots = parseMediaList(game.screenshots).slice(0, 4);
+  const [token, viewer] = await Promise.all([getSessionToken(), getSessionUser()]);
+  const myCollections =
+    token && viewer
+      ? await listMyCollections(token, 1, 50).then((result) => result.data).catch(() => [])
+      : [];
 
   return (
     <div className="space-y-6">
@@ -191,6 +199,24 @@ export default async function GameDetailPage({
               <TaxonomyLinks items={game.publishers} label="Publishers" param="publisher" />
             </CardContent>
           </Card>
+
+          {viewer ? (
+            <AddToCollectionForm collections={myCollections} gameId={game.id} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sign in to save this game</CardTitle>
+                <CardDescription>
+                  Collection membership changes require an authenticated session.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="secondary">
+                  <Link href="/auth">Go to login</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

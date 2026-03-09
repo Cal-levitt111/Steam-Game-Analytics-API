@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { createCollectionAction, type CreateCollectionState } from "@/app/collections/actions";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,21 @@ import { Textarea } from "@/components/ui/textarea";
 const initialState: CreateCollectionState = {};
 
 export function CreateCollectionForm() {
+  const router = useRouter();
   const [state, action, pending] = useActionState(createCollectionAction, initialState);
+
+  useEffect(() => {
+    if (!state.redirectTo) {
+      return;
+    }
+
+    const redirectTo = state.redirectTo;
+
+    startTransition(() => {
+      router.push(redirectTo);
+      router.refresh();
+    });
+  }, [router, state.redirectTo]);
 
   return (
     <Card>

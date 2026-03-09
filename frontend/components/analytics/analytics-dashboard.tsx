@@ -55,7 +55,7 @@ function ChartShell({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="min-w-0">{children}</CardContent>
     </Card>
   );
 }
@@ -79,7 +79,7 @@ export function AnalyticsDashboard({
           title="Release trends"
           description="Game counts by release year from the analytics endpoint."
         >
-          <div className="h-80">
+          <div className="h-80 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={releaseTrends}>
                 <defs>
@@ -108,7 +108,7 @@ export function AnalyticsDashboard({
           title="Top genres"
           description="Highest-volume genres surfaced from the taxonomy analytics."
         >
-          <div className="h-80">
+          <div className="h-80 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topGenres}>
                 <CartesianGrid stroke="rgba(16,32,51,0.08)" vertical={false} />
@@ -127,7 +127,7 @@ export function AnalyticsDashboard({
           title="Price distribution"
           description="Bucketed price bands, including free games."
         >
-          <div className="h-80">
+          <div className="h-80 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -151,7 +151,7 @@ export function AnalyticsDashboard({
           title="Review sentiment"
           description="Distribution of positive review ratio buckets."
         >
-          <div className="h-80">
+          <div className="h-80 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={reviewSentiment}>
                 <CartesianGrid stroke="rgba(16,32,51,0.08)" vertical={false} />

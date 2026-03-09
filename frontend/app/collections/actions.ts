@@ -24,6 +24,7 @@ const createCollectionSchema = z.object({
 
 export type CreateCollectionState = {
   error?: string;
+  redirectTo?: string;
 };
 
 export type CollectionMembershipState = {
@@ -56,7 +57,7 @@ export async function createCollectionAction(
 
     revalidatePath("/collections");
     revalidatePath("/collections/public");
-    redirect(`/collections/${collection.id}`);
+    return { redirectTo: `/collections/${collection.id}` };
   } catch (error) {
     if (isApiError(error)) {
       return { error: error.payload.message };

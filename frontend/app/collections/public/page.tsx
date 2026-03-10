@@ -5,6 +5,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { buildQueryString } from "@/lib/api/normalizers";
 import { PaginationNav } from "@/components/ui/pagination-nav";
 import { listPublicCollections } from "@/lib/api/collections";
+import { requireSession } from "@/lib/auth/guards";
 
 function readString(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -28,11 +29,12 @@ export default async function PublicCollectionsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { token } = await requireSession();
   const rawParams = await searchParams;
   const page = readNumber(readString(rawParams.page));
   let collections;
   try {
-    collections = await listPublicCollections(page, 20, "game_count");
+    collections = await listPublicCollections(token, page, 20, "game_count");
   } catch {
     return (
       <ErrorState description="Public collections could not be loaded from the backend. Confirm the API is running." />

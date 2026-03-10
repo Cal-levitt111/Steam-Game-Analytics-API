@@ -8,11 +8,13 @@ from app.core.database import get_db
 from app.core.exceptions import AppException
 from app.main import app
 from app.routers import games as games_router_module
+from tests.auth_helpers import create_auth_tables, issue_auth_headers
 
 
 @pytest.fixture()
-def similarity_client() -> TestClient:
+def similarity_client() -> tuple[TestClient, dict[str, str]]:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    create_auth_tables(engine)
     with engine.begin() as conn:
         conn.execute(
             text(
@@ -38,44 +40,62 @@ def similarity_client() -> TestClient:
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as client:
-        yield client
+        yield client, issue_auth_headers(client, email='similarity@example.com')
     app.dependency_overrides.clear()
 
 
-def test_similar_games_returns_501_when_vector_not_supported(similarity_client: TestClient) -> None:
-    response = similarity_client.get('/api/v1/games/1/similar')
+def test_similar_games_returns_501_when_vector_not_supported(
+    similarity_client: tuple[TestClient, dict[str, str]]
+) -> None:
+    client, headers = similarity_client
+    response = client.get('/api/v1/games/1/similar', headers=headers)
     assert response.status_code == 501
     assert response.json()['error']['code'] == 'FEATURE_UNAVAILABLE'
 
 
-def test_similar_games_404_passthrough(similarity_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_similar_games_404_passthrough(
+    similarity_client: tuple[TestClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, headers = similarity_client
+
     def fake_list_similar_games(*args, **kwargs):
         raise AppException(404, 'RESOURCE_NOT_FOUND', 'missing')
 
     monkeypatch.setattr(games_router_module, 'list_similar_games', fake_list_similar_games)
-    response = similarity_client.get('/api/v1/games/999/similar')
+    response = client.get('/api/v1/games/999/similar', headers=headers)
     assert response.status_code == 404
     assert response.json()['error']['code'] == 'RESOURCE_NOT_FOUND'
 
 
-def test_similar_games_409_passthrough(similarity_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_similar_games_409_passthrough(
+    similarity_client: tuple[TestClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, headers = similarity_client
+
     def fake_list_similar_games(*args, **kwargs):
         raise AppException(409, 'EMBEDDING_NOT_AVAILABLE', 'no embedding')
 
     monkeypatch.setattr(games_router_module, 'list_similar_games', fake_list_similar_games)
-    response = similarity_client.get('/api/v1/games/1/similar')
+    response = client.get('/api/v1/games/1/similar', headers=headers)
     assert response.status_code == 409
     assert response.json()['error']['code'] == 'EMBEDDING_NOT_AVAILABLE'
 
 
-def test_similar_games_success_shape(similarity_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_similar_games_success_shape(
+    similarity_client: tuple[TestClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, headers = similarity_client
     monkeypatch.setattr(games_router_module, 'list_similar_games', lambda *args, **kwargs: ([], {}))
-    response = similarity_client.get('/api/v1/games/1/similar?limit=5')
+    response = client.get('/api/v1/games/1/similar?limit=5', headers=headers)
     assert response.status_code == 200
     assert response.json() == {'data': []}
 
 
-def test_similar_games_limit_validation(similarity_client: TestClient) -> None:
-    response = similarity_client.get('/api/v1/games/1/similar?limit=0')
+def test_similar_games_limit_validation(similarity_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = similarity_client
+    response = client.get('/api/v1/games/1/similar?limit=0', headers=headers)
     assert response.status_code == 422
     assert response.json()['error']['code'] == 'VALIDATION_ERROR'

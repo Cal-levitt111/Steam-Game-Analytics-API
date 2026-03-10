@@ -1,3 +1,5 @@
+from fastapi.testclient import TestClient
+
 from app.core.config import Settings, settings, validate_runtime_settings
 from app.main import create_app
 
@@ -32,6 +34,8 @@ def test_validate_runtime_settings_allows_secure_production_config(monkeypatch) 
 
     app = create_app()
     assert app.title == settings.app_name
+    client = TestClient(app, base_url='http://api.example.com')
+    assert client.get('/docs').status_code == 404
 
 
 def test_settings_normalize_escaped_newlines_for_pem_values() -> None:
@@ -55,3 +59,15 @@ def test_validate_runtime_settings_is_noop_outside_production(monkeypatch) -> No
     monkeypatch.setattr(settings, 'jwt_active_public_key', '')
 
     validate_runtime_settings(settings)
+
+
+def test_development_environment_exposes_runtime_docs(monkeypatch) -> None:
+    monkeypatch.setattr(settings, 'environment', 'development')
+    monkeypatch.setattr(settings, 'force_https', False)
+    monkeypatch.setattr(settings, 'allowed_hosts', ['127.0.0.1', 'testserver', 'localhost'])
+
+    app = create_app()
+    client = TestClient(app)
+
+    assert client.get('/docs').status_code == 200
+    assert client.get('/openapi.json').status_code == 200

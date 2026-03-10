@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
+from app.core.auth import get_current_user
 from app import main as main_module
+from app.models.user import User
 
 
 def _build_client(
@@ -16,6 +18,11 @@ def _build_client(
     monkeypatch.setattr(main_module.settings, 'trusted_proxy_cidrs', trusted_proxy_cidrs)
     monkeypatch.setattr(main_module.settings, 'hsts_max_age_seconds', hsts_max_age_seconds)
     app = main_module.create_app()
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id=1,
+        email='transport@example.com',
+        hashed_password='not-used',
+    )
     return TestClient(
         app,
         base_url='http://127.0.0.1:8000',
@@ -31,7 +38,7 @@ def test_force_https_redirects_http_requests(monkeypatch) -> None:
         allowed_hosts=['127.0.0.1'],
         trusted_proxy_cidrs=[],
     )
-    response = client.get('/api/v1/health')
+    response = client.get('/api/v1/health', headers={'Authorization': 'Bearer test-token'})
 
     assert response.status_code == 307
     assert response.headers['location'] == 'https://127.0.0.1:8000/api/v1/health'
@@ -44,7 +51,10 @@ def test_trusted_proxy_forwarded_https_skips_redirect_and_sets_hsts(monkeypatch)
         allowed_hosts=['127.0.0.1'],
         trusted_proxy_cidrs=['127.0.0.1/32'],
     )
-    response = client.get('/api/v1/health', headers={'X-Forwarded-Proto': 'https'})
+    response = client.get(
+        '/api/v1/health',
+        headers={'Authorization': 'Bearer test-token', 'X-Forwarded-Proto': 'https'},
+    )
 
     assert response.status_code == 200
     assert response.headers['strict-transport-security'].startswith('max-age=63072000')
@@ -59,7 +69,10 @@ def test_untrusted_proxy_forwarded_https_is_ignored(monkeypatch) -> None:
         allowed_hosts=['127.0.0.1'],
         trusted_proxy_cidrs=['10.0.0.0/8'],
     )
-    response = client.get('/api/v1/health', headers={'X-Forwarded-Proto': 'https'})
+    response = client.get(
+        '/api/v1/health',
+        headers={'Authorization': 'Bearer test-token', 'X-Forwarded-Proto': 'https'},
+    )
 
     assert response.status_code == 307
     assert response.headers['location'] == 'https://127.0.0.1:8000/api/v1/health'
@@ -71,6 +84,11 @@ def test_disallowed_host_returns_400(monkeypatch) -> None:
     monkeypatch.setattr(main_module.settings, 'trusted_proxy_cidrs', [])
     monkeypatch.setattr(main_module.settings, 'hsts_max_age_seconds', 63072000)
     app = main_module.create_app()
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id=1,
+        email='transport@example.com',
+        hashed_password='not-used',
+    )
 
     client = TestClient(
         app,
@@ -78,5 +96,5 @@ def test_disallowed_host_returns_400(monkeypatch) -> None:
         follow_redirects=False,
         client=('127.0.0.1', 50000),
     )
-    response = client.get('/api/v1/health')
+    response = client.get('/api/v1/health', headers={'Authorization': 'Bearer test-token'})
     assert response.status_code == 400

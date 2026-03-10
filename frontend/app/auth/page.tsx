@@ -33,8 +33,8 @@ export default async function AuthPage() {
         <CardHeader>
           <CardTitle>What this unlocks</CardTitle>
           <CardDescription>
-            Authenticated pages are live now, and the next commits will fill in the actual
-            collection CRUD, membership actions, and analytics views.
+            Signing in unlocks the protected catalogue, analytics, and collection workflows used by
+            the rest of the frontend.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
@@ -43,9 +43,9 @@ export default async function AuthPage() {
             <p className="mt-2 text-sm leading-6 text-muted">Resolved server-side through `/auth/me`.</p>
           </div>
           <div className="rounded-[1.4rem] bg-background-alt p-4">
-            <p className="font-medium text-primary">Protected collections route</p>
+            <p className="font-medium text-primary">Protected application routes</p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              `/collections` now redirects to this page when there is no valid session.
+              All frontend pages except `/auth` require a valid session.
             </p>
           </div>
           <div className="rounded-[1.4rem] bg-background-alt p-4">

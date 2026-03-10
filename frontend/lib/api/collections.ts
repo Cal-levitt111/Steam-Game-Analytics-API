@@ -22,13 +22,19 @@ export function listMyCollections(accessToken: string, page = 1, perPage = 20) {
   });
 }
 
-export function listPublicCollections(page = 1, perPage = 20, sort: "created_at" | "game_count" = "created_at") {
+export function listPublicCollections(
+  accessToken: string,
+  page = 1,
+  perPage = 20,
+  sort: "created_at" | "game_count" = "created_at",
+) {
   return getPaginated<CollectionListItem>("/api/v1/collections/public", {
+    accessToken,
     query: { page, per_page: perPage, sort },
   });
 }
 
-export function getCollection(collectionId: number, accessToken?: string) {
+export function getCollection(collectionId: number, accessToken: string) {
   return getModel<CollectionDetail>(`/api/v1/collections/${collectionId}`, {
     accessToken,
   });

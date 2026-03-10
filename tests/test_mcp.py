@@ -18,6 +18,7 @@ def test_mcp_uses_read_only_tag_allowlist(monkeypatch) -> None:
         def __init__(self, fastapi, **kwargs):
             captured['include_tags'] = kwargs.get('include_tags')
             captured['name'] = kwargs.get('name')
+            captured['auth_config'] = kwargs.get('auth_config')
 
         def mount(self, router=None, mount_path: str = '/mcp', transport: str = 'sse') -> None:
             captured['mount_path'] = mount_path
@@ -27,6 +28,8 @@ def test_mcp_uses_read_only_tag_allowlist(monkeypatch) -> None:
 
     assert captured.get('name') == main_module.settings.app_name
     assert captured.get('include_tags') == main_module.MCP_READONLY_TAGS
+    assert captured.get('auth_config') is not None
+    assert captured['auth_config'].dependencies
     assert 'auth' not in main_module.MCP_READONLY_TAGS
     assert 'collections' not in main_module.MCP_READONLY_TAGS
     assert captured.get('mount_path') == main_module.settings.mcp_mount_path

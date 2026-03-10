@@ -12,7 +12,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { listMyCollections } from "@/lib/api/collections";
 import { getGame, getSimilarGames } from "@/lib/api/games";
 import { ApiError, isApiError } from "@/lib/api/client";
-import { getSessionToken, getSessionUser } from "@/lib/auth/session";
+import { requireSession } from "@/lib/auth/guards";
 import { formatCompactNumber, formatCurrency } from "@/lib/formatters";
 
 function stripHtml(value: string | null) {
@@ -66,6 +66,7 @@ export default async function GameDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { token } = await requireSession();
   const { id } = await params;
   const gameId = Number(id);
 
@@ -75,7 +76,7 @@ export default async function GameDetailPage({
 
   let game;
   try {
-    game = await getGame(gameId);
+    game = await getGame(token, gameId);
   } catch (error) {
     if (isApiError(error) && error.status === 404) {
       notFound();
@@ -93,7 +94,7 @@ export default async function GameDetailPage({
     | { state: "error"; message: string };
 
   try {
-    const data = await getSimilarGames(gameId, 8);
+    const data = await getSimilarGames(token, gameId, 8);
     similarGames = { state: "ready", data };
   } catch (error) {
     if (error instanceof ApiError) {
@@ -113,11 +114,7 @@ export default async function GameDetailPage({
   }
 
   const screenshots = parseMediaList(game.screenshots).slice(0, 4);
-  const [token, viewer] = await Promise.all([getSessionToken(), getSessionUser()]);
-  const myCollections =
-    token && viewer
-      ? await listMyCollections(token, 1, 50).then((result) => result.data).catch(() => [])
-      : [];
+  const myCollections = await listMyCollections(token, 1, 50).then((result) => result.data).catch(() => []);
 
   return (
     <div className="space-y-6">
@@ -200,23 +197,7 @@ export default async function GameDetailPage({
             </CardContent>
           </Card>
 
-          {viewer ? (
-            <AddToCollectionForm collections={myCollections} gameId={game.id} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign in to save this game</CardTitle>
-                <CardDescription>
-                  Collection membership changes require an authenticated session.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="secondary">
-                  <Link href="/auth">Go to login</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          <AddToCollectionForm collections={myCollections} gameId={game.id} />
 
           <Card>
             <CardHeader>

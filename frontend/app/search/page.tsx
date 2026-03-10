@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { buildQueryString } from "@/lib/api/normalizers";
 import { searchGames } from "@/lib/api/games";
 import { listGenres, listTags } from "@/lib/api/taxonomy";
+import { requireSession } from "@/lib/auth/guards";
 import { formatCompactNumber, formatCurrency } from "@/lib/formatters";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -48,6 +49,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const { token } = await requireSession();
   const rawParams = await searchParams;
   const q = readString(rawParams.q)?.trim() ?? "";
   const page = readNumber(readString(rawParams.page)) ?? 1;
@@ -56,11 +58,14 @@ export default async function SearchPage({
   const isFree = readBoolean(readString(rawParams.is_free));
   const minScore = readNumber(readString(rawParams.min_score));
 
-  const [genresResult, tagsResult] = await Promise.allSettled([listGenres(1, 40), listTags(1, 40)]);
+  const [genresResult, tagsResult] = await Promise.allSettled([
+    listGenres(token, 1, 40),
+    listTags(token, 1, 40),
+  ]);
 
   const searchResult =
     q.length > 0
-      ? await searchGames({
+      ? await searchGames(token, {
           q,
           page,
           per_page: 12,

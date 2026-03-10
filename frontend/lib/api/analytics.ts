@@ -14,40 +14,54 @@ import type {
   TopGenreRow,
 } from "@/lib/api/types";
 
-export function getReleaseTrends(query?: ReleaseTrendQuery) {
-  return getAnalytics<ReleaseTrendRow>("/api/v1/analytics/release-trends", { query });
+export function getReleaseTrends(accessToken: string, query?: ReleaseTrendQuery) {
+  return getAnalytics<ReleaseTrendRow>("/api/v1/analytics/release-trends", {
+    accessToken,
+    query,
+  });
 }
 
-export function getTopGenres(limit = 10) {
+export function getTopGenres(accessToken: string, limit = 10) {
   return getAnalytics<TopGenreRow>("/api/v1/analytics/top-genres", {
+    accessToken,
     query: { limit },
   });
 }
 
-export function getGenreGrowth(query?: AnalyticsGenreGrowthQuery) {
-  return getAnalytics<GenreGrowthRow>("/api/v1/analytics/genre-growth", { query });
+export function getGenreGrowth(accessToken: string, query?: AnalyticsGenreGrowthQuery) {
+  return getAnalytics<GenreGrowthRow>("/api/v1/analytics/genre-growth", {
+    accessToken,
+    query,
+  });
 }
 
-export function getPriceDistribution() {
-  return getAnalytics<PriceDistributionRow>("/api/v1/analytics/price-distribution");
+export function getPriceDistribution(accessToken: string) {
+  return getAnalytics<PriceDistributionRow>("/api/v1/analytics/price-distribution", { accessToken });
 }
 
-export function getTopDevelopers(query?: AnalyticsTopDevelopersQuery) {
-  return getAnalytics<TopDeveloperRow>("/api/v1/analytics/top-developers", { query });
+export function getTopDevelopers(accessToken: string, query?: AnalyticsTopDevelopersQuery) {
+  return getAnalytics<TopDeveloperRow>("/api/v1/analytics/top-developers", {
+    accessToken,
+    query,
+  });
 }
 
-export function getScoreByGenre() {
-  return getAnalytics<ScoreByGenreRow>("/api/v1/analytics/score-by-genre");
+export function getScoreByGenre(accessToken: string) {
+  return getAnalytics<ScoreByGenreRow>("/api/v1/analytics/score-by-genre", { accessToken });
 }
 
-export function getFreeVsPaid() {
-  return getAnalytics<FreeVsPaidRow>("/api/v1/analytics/free-vs-paid");
+export function getFreeVsPaid(accessToken: string) {
+  return getAnalytics<FreeVsPaidRow>("/api/v1/analytics/free-vs-paid", { accessToken });
 }
 
-export function getPlatformBreakdown() {
-  return getAnalytics<PlatformBreakdownRow>("/api/v1/analytics/platform-breakdown");
+export function getPlatformBreakdown(accessToken: string) {
+  return getAnalytics<PlatformBreakdownRow>("/api/v1/analytics/platform-breakdown", {
+    accessToken,
+  });
 }
 
-export function getReviewSentiment() {
-  return getAnalytics<ReviewSentimentRow>("/api/v1/analytics/review-sentiment");
+export function getReviewSentiment(accessToken: string) {
+  return getAnalytics<ReviewSentimentRow>("/api/v1/analytics/review-sentiment", {
+    accessToken,
+  });
 }

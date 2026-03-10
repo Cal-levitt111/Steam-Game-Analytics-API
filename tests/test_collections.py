@@ -152,6 +152,6 @@ def test_public_collection_listing(collections_client: tuple[TestClient, session
     headers = _auth_headers(client, 'public@example.com')
     client.post('/api/v1/collections', json={'name': 'Visible', 'is_public': True}, headers=headers)
 
-    public_resp = client.get('/api/v1/collections/public')
+    public_resp = client.get('/api/v1/collections/public', headers=headers)
     assert public_resp.status_code == 200
     assert any(item['name'] == 'Visible' for item in public_resp.json()['data'])

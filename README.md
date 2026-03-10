@@ -1,204 +1,224 @@
 # Steam-Game-Analytics-API
 
-FastAPI backend for Steam game catalog, search, taxonomy browsing, collections CRUD, and analytics.
+Steam Game Analytics is a coursework project built around a FastAPI backend and a Next.js frontend for exploring Steam catalogue data, full-text search, similarity recommendations, user collections, and analytics.
 
-## Tech Stack
+## Delivered Scope
 
-- FastAPI
-- PostgreSQL + SQLAlchemy
-- pgvector (Postgres extension)
-- fastapi-mcp (MCP server mount)
-- Alembic migrations
-- sentence-transformers (local embedding generation)
-- Pytest + TestClient
+- Normalised PostgreSQL schema with games, taxonomy dimensions, junction tables, users, collections, and collection membership.
+- JWT bearer authentication with RS256 signing, JWKS publication, profile lookup/update, and database-backed auth rate limiting.
+- Read-only catalogue, search, taxonomy, and analytics endpoints.
+- Full CRUD for authenticated user collections plus collection membership add/remove.
+- pgvector-powered similar-game recommendations with offline embedding generation.
+- Next.js frontend with a BFF-style auth layer that stores the API token in an HTTP-only cookie.
+- Optional MCP server mount with read-only tool exposure.
 
-## Quick Start
+API base path: `/api/v1`
 
-1. Install dependencies:
-   ```bash
+## Access Model
+
+- In `ENVIRONMENT=development`, Swagger/OpenAPI is available at `/docs`, `/redoc`, and `/openapi.json`.
+- In `ENVIRONMENT=development`, read-only backend routes are public for easier local testing.
+- In `ENVIRONMENT=production`, `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are the only public backend endpoints.
+- In `ENVIRONMENT=production`, all other backend routes require a valid bearer token, including health, JWKS, collections/public, analytics, taxonomy, and MCP when enabled.
+- The frontend only leaves `/auth` publicly accessible. All other application pages redirect to `/auth` when there is no valid session.
+- Interactive runtime docs are intentionally disabled outside development so the hosted app does not expose an unauthenticated API surface.
+
+## Stack
+
+- Python 3.12
+- FastAPI + Starlette
+- SQLAlchemy 2.x + Alembic
+- PostgreSQL 16 + pgvector
+- `python-jose` + `cryptography`
+- Pandas + sentence-transformers
+- Next.js 16 + React 19 + TypeScript
+- Pytest, Vitest, Playwright
+
+## Repository Layout
+
+- `app/`: backend application code
+- `app/core/`: config, auth, DB session, security middleware, error handling
+- `app/routers/`: HTTP endpoints
+- `app/services/`: business rules
+- `app/repositories/`: query/data-access layer
+- `app/models/`: SQLAlchemy models and association tables
+- `app/schemas/`: Pydantic request/response contracts
+- `alembic/`: migration history
+- `scripts/`: import, seed, and embedding generation utilities
+- `frontend/`: Next.js frontend
+- `tests/`: backend tests
+- `docs/`: architecture, endpoint matrix, and deployment runbooks
+
+## Prerequisites
+
+- Python 3.12
+- Node.js 20+
+- Docker Desktop or another Docker runtime for the local Postgres container
+
+## Backend Setup
+
+1. Create and activate a virtual environment.
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   ```
+2. Install Python dependencies.
+   ```powershell
    pip install -r requirements.txt
    ```
-2. Copy environment file:
-   ```bash
-   copy .env.example .env
+3. Create the backend environment file.
+   ```powershell
+   Copy-Item .env.example .env
    ```
-3. Start PostgreSQL (Docker path):
-   ```bash
+4. Start PostgreSQL.
+   ```powershell
    docker compose up -d db
    ```
-4. Run migrations:
-   ```bash
+5. Apply migrations.
+   ```powershell
    python -m alembic upgrade head
    ```
-5. Import seed dataset:
-   ```bash
+6. Import the seed dataset.
+   ```powershell
    python scripts/import_games.py --mode seed
    ```
-6. Generate seed embeddings (for similar-games endpoint):
-   ```bash
+7. Generate embeddings for the similarity endpoint.
+   ```powershell
    python scripts/generate_embeddings.py --mode seed --only-missing
    ```
-7. Run API:
-   ```bash
+8. Start the API.
+   ```powershell
    uvicorn app.main:app --reload
    ```
 
-If you see a Postgres collation mismatch warning after switching images, recreate volumes:
+If Postgres reports a collation mismatch after switching images, recreate the volume:
 
-```bash
+```powershell
 docker compose down -v
 docker compose up -d db
 ```
 
-Docs: `http://localhost:8000/docs`  
-Health: `http://localhost:8000/api/v1/health`
+## Frontend Setup
 
-## Transport Security (Production)
+1. Create the frontend environment file.
+   ```powershell
+   Copy-Item frontend\.env.example frontend\.env.local
+   ```
+2. Install frontend dependencies.
+   ```powershell
+   Set-Location frontend
+   npm install
+   ```
+3. Start the frontend.
+   ```powershell
+   npm run dev
+   ```
 
-Configure these settings when deploying behind TLS termination:
+Default local URLs:
 
-- `FORCE_HTTPS=true`
-- `ALLOWED_HOSTS=api.example.com`
-- `TRUSTED_PROXY_CIDRS=<load-balancer-cidr-list>`
-- `HSTS_MAX_AGE_SECONDS=63072000`
+- Frontend: `http://localhost:3000`
+- Backend: `http://127.0.0.1:8000`
+- Local API docs: `http://127.0.0.1:8000/docs`
 
-Deployment requirements:
+## Local Run Flow
 
-- Ingress/reverse proxy must terminate TLS and forward `X-Forwarded-Proto`.
-- Only trusted proxy CIDRs should be listed, otherwise forwarded headers are ignored.
-- Requests over plain HTTP are redirected to HTTPS (`307`) when `FORCE_HTTPS=true`.
-- HSTS is only emitted for requests treated as HTTPS.
+1. Start the backend and frontend using the setup steps above.
+2. Open `http://localhost:3000/auth`.
+3. Register a user or sign in with an existing account.
+4. Browse the authenticated frontend routes:
+   - `/`
+   - `/games`
+   - `/games/[id]`
+   - `/search`
+   - `/analytics`
+   - `/mcp`
+   - `/collections`
+   - `/collections/public`
+   - `/collections/[id]`
 
-## Auth Rate Limiting
+## API Docs
 
-Auth endpoints are protected with database-backed counters:
+Hosted/generated API docs: `<add generated API docs link here>`
 
-- `POST /api/v1/auth/login` is limited by both email and client IP.
-- `POST /api/v1/auth/register` is limited by client IP.
-- Blocked requests return `429 TOO_MANY_REQUESTS` with `Retry-After`.
+In local development, FastAPI serves Swagger and OpenAPI directly at `/docs` and `/openapi.json`.
 
-Tuning settings:
+If you need to generate the schema file manually for external documentation generation:
 
-- `AUTH_RATE_LIMIT_WINDOW_SECONDS`
-- `AUTH_RATE_LIMIT_BLOCK_SECONDS`
-- `AUTH_RATE_LIMIT_LOGIN_EMAIL_MAX_ATTEMPTS`
-- `AUTH_RATE_LIMIT_LOGIN_IP_MAX_ATTEMPTS`
-- `AUTH_RATE_LIMIT_REGISTER_IP_MAX_ATTEMPTS`
-
-## JWT Signing And Rotation
-
-JWT access tokens are signed with RS256 and include a key ID (`kid`) header.
-
-- Active signing key is selected via `JWT_ACTIVE_KID`.
-- Public keys are exposed at `GET /.well-known/jwks.json`.
-- Previous verification keys can be loaded via `JWT_ADDITIONAL_PUBLIC_KEYS`.
-- Legacy HS256 verification can be temporarily enabled with `JWT_ACCEPT_LEGACY_HS256_UNTIL`.
-
-Core settings:
-
-- `JWT_ISSUER`
-- `JWT_AUDIENCE`
-- `JWT_ACTIVE_KID`
-- `JWT_ACTIVE_PRIVATE_KEY`
-- `JWT_ACTIVE_PUBLIC_KEY`
-- `JWT_ADDITIONAL_PUBLIC_KEYS`
-- `JWT_CLOCK_SKEW_SECONDS`
-
-## Production Startup Guards
-
-When `ENVIRONMENT=production`, the app now refuses to start unless:
-
-- `FORCE_HTTPS=true`
-- `ALLOWED_HOSTS` is set
-- `SECRET_KEY` is not the placeholder value
-- `JWT_ACTIVE_PRIVATE_KEY` is configured
-- `JWT_ACTIVE_PUBLIC_KEY` is configured
-
-See [docs/production-security-checklist.md](docs/production-security-checklist.md) for the deployment checklist.
-
-## Data Workflow
-
-Committed seed dataset:
-
-- `data/seed/steam_game_seed_1000_2.csv` (1000 rows)
-
-Regenerate seed from your full Kaggle CSV:
-
-```bash
-python scripts/generate_seed_from_dataset.py --n 1000 --seed 42 --out data/seed/steam_game_seed_1000_2.csv
+```powershell
+python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
 ```
 
-Import modes:
+## Local MCP Testing In VS Code
 
-- Seed import:
-  ```bash
-  python scripts/import_games.py --mode seed
-  ```
-- Full import:
-  ```bash
-  python scripts/import_games.py --mode full --input "<path-to-full-kaggle-csv>"
-  ```
-- Dry run (no writes):
-  ```bash
-  python scripts/import_games.py --mode seed --dry-run
-  ```
+To test the MCP server locally in VS Code:
 
-## Running Tests
+1. Start the backend locally with:
+   ```powershell
+   uvicorn app.main:app --reload
+   ```
+2. Confirm the MCP mount is reachable at `http://127.0.0.1:8000/mcp`.
+3. Create or update `.vscode/mcp.json` in the repository root:
+   ```json
+   {
+     "servers": {
+       "steam-api": {
+         "type": "http",
+         "url": "http://127.0.0.1:8000/mcp"
+       }
+     }
+   }
+   ```
+4. Reload VS Code if the MCP server is not detected immediately.
+5. Use the MCP server from your VS Code MCP workflow.
 
-Run full suite:
+Local development leaves the MCP mount open for testing. In production, when MCP is enabled, the mount is protected by bearer authentication.
 
-```bash
+## Coursework Alignment
+
+- CRUD requirement: implemented through collections create/read/update/delete plus membership add/remove.
+- Authentication requirement: JWT bearer auth is enforced across the application surface outside the login/register bootstrap routes.
+- SQL database requirement: PostgreSQL schema is normalised with junction tables and migration history in Alembic.
+- Advanced querying requirement: full-text search, pgvector similarity, and aggregation-heavy analytics endpoints are implemented.
+- Testing requirement: backend pytest suite plus frontend unit and end-to-end tests are included.
+- Documentation requirement: README, architecture notes, deployment checklist, and endpoint/coursework mapping are maintained in `docs/`.
+
+## Testing
+
+Backend:
+
+```powershell
 python -m pytest -q
 ```
 
-Run targeted suites:
+Frontend:
 
-```bash
-python -m pytest tests/test_auth.py -q
-python -m pytest tests/test_collections.py -q
-python -m pytest tests/test_analytics.py -q
+```powershell
+Set-Location frontend
+npm run lint
+npm run typecheck
+npm run test:unit
 ```
 
-## Current API Coverage
+Optional frontend E2E verification:
 
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `GET /api/v1/auth/me`
-- `PUT /api/v1/auth/me`
-- `GET /.well-known/jwks.json`
-- `GET /api/v1/games`
-- `GET /api/v1/games/{id}`
-- `GET /api/v1/games/{id}/similar`
-- `GET /api/v1/search`
-- `MCP server mount at /mcp` (read-only tool exposure)
-- `GET /api/v1/genres`, `GET /api/v1/genres/{slug}`, `GET /api/v1/genres/{slug}/games`
-- `GET /api/v1/tags`, `GET /api/v1/tags/{slug}`, `GET /api/v1/tags/{slug}/games`
-- `GET /api/v1/developers`, `GET /api/v1/developers/{slug}`, `GET /api/v1/developers/{slug}/games`
-- `GET /api/v1/publishers`, `GET /api/v1/publishers/{slug}`, `GET /api/v1/publishers/{slug}/games`
-- `POST/GET/PUT/DELETE /api/v1/collections...` (+ membership endpoints)
-- `GET /api/v1/analytics/*`
+```powershell
+Set-Location frontend
+npx playwright install chromium
+npm run test:e2e
+```
 
-## Similar Endpoint Notes
+## Security And Deployment Notes
 
-- Endpoint: `GET /api/v1/games/{id}/similar?limit=10`
-- Query params: `limit` (default `10`, min `1`, max `50`)
-- Expected errors:
-  - `404 RESOURCE_NOT_FOUND` for missing `id`
-  - `409 EMBEDDING_NOT_AVAILABLE` when target game has no embedding
-  - `501 FEATURE_UNAVAILABLE` when vector support/config is unavailable
+- The app refuses to start in production without `FORCE_HTTPS`, `ALLOWED_HOSTS`, a non-placeholder `SECRET_KEY`, and active JWT key material.
+- Auth endpoints are rate-limited by database-backed counters.
+- JWKS remains available for key verification. It is public in development and protected in production.
+- `ENABLE_MCP_SERVER=false` is the safest default for deployment. If enabled, the MCP transport is still auth-gated.
+- See [docs/production-security-checklist.md](docs/production-security-checklist.md) before deployment.
 
-## MCP Notes
+## Supporting Docs
 
-- MCP server is mounted at `/mcp`.
-- Exposure is intentionally read-only by tag allowlist:
-  - `health`, `games`, `search`, `genres`, `tags`, `developers`, `publishers`, `analytics`
-- Auth and collections write flows are excluded from MCP tool exposure.
-- VS Code Copilot MCP config is provided in `.vscode/mcp.json` (URL: `http://127.0.0.1:8000/mcp`).
-
-## Notes
-
-- Docker is required only if you use the compose Postgres path.
-- In this local environment, migrations were validated via Alembic offline SQL generation when live Postgres was unavailable.
-- Head migrations include index hardening for search/filter workloads (`ix_games_search_vector`, `ix_games_metacritic_score`, `ix_games_release_date`, `ix_games_price_usd`).
-- Head migrations also include pgvector enablement and game embedding index (`ix_games_embedding_ivfflat_cosine`).
-- Frontend work is intentionally deferred.
+- [docs/architecture.md](docs/architecture.md)
+- [docs/endpoint-matrix.md](docs/endpoint-matrix.md)
+- [docs/production-security-checklist.md](docs/production-security-checklist.md)
+- [docs/jwt-key-rotation-runbook.md](docs/jwt-key-rotation-runbook.md)
+- [frontend/README.md](frontend/README.md)

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
+import { requireSession } from "@/lib/auth/guards";
 import { formatCompactNumber, formatCurrency } from "@/lib/formatters";
 
 const featureCards = [
@@ -36,10 +37,11 @@ const featureCards = [
 ];
 
 export default async function Home() {
+  const { token } = await requireSession();
   const [gamesResult, genresResult, trendsResult] = await Promise.allSettled([
-    listGames({ per_page: 6, sort: "positive_reviews", order: "desc" }),
-    getTopGenres(6),
-    getReleaseTrends(),
+    listGames(token, { per_page: 6, sort: "positive_reviews", order: "desc" }),
+    getTopGenres(token, 6),
+    getReleaseTrends(token),
   ]);
 
   const games = gamesResult.status === "fulfilled" ? gamesResult.value.data : [];
@@ -110,8 +112,8 @@ export default async function Home() {
               <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent className="text-sm leading-6 text-muted">
-              The app shell is ready to receive the API client, BFF auth routes, and the feature
-              pages described in the implementation plan.
+              The frontend is fully wired into the protected backend and exercises the same
+              catalogue, analytics, similarity, and collection flows used in local testing.
             </CardContent>
           </Card>
         ))}

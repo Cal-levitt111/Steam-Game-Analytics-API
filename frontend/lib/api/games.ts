@@ -12,21 +12,22 @@ import type {
   SimilarGameItem,
 } from "@/lib/api/types";
 
-export function listGames(query?: GamesQuery) {
-  return getPaginated<GameListItem>("/api/v1/games", { query });
+export function listGames(accessToken: string, query?: GamesQuery) {
+  return getPaginated<GameListItem>("/api/v1/games", { accessToken, query });
 }
 
-export function getGame(gameId: number) {
-  return getModel<GameDetail>(`/api/v1/games/${gameId}`);
+export function getGame(accessToken: string, gameId: number) {
+  return getModel<GameDetail>(`/api/v1/games/${gameId}`, { accessToken });
 }
 
-export async function getSimilarGames(gameId: number, limit = 10) {
+export async function getSimilarGames(accessToken: string, gameId: number, limit = 10) {
   const response = await getWrapped<SimilarGameItem[]>(`/api/v1/games/${gameId}/similar`, {
+    accessToken,
     query: { limit },
   });
   return response.data;
 }
 
-export function searchGames(query: SearchQuery) {
-  return getPaginated<SearchGameItem>("/api/v1/search", { query });
+export function searchGames(accessToken: string, query: SearchQuery) {
+  return getPaginated<SearchGameItem>("/api/v1/search", { accessToken, query });
 }

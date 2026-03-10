@@ -9,13 +9,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { getCollection } from "@/lib/api/collections";
 import { isApiError } from "@/lib/api/client";
-import { getSessionToken, getSessionUser } from "@/lib/auth/session";
+import { requireSession } from "@/lib/auth/guards";
 
 export default async function CollectionDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { token, user: viewer } = await requireSession();
   const { id } = await params;
   const collectionId = Number(id);
 
@@ -23,10 +24,8 @@ export default async function CollectionDetailPage({
     notFound();
   }
 
-  const [token, viewer] = await Promise.all([getSessionToken(), getSessionUser()]);
-
   try {
-    const collection = await getCollection(collectionId, token ?? undefined);
+    const collection = await getCollection(collectionId, token);
     const isOwner = viewer?.id === collection.user_id;
 
     return (
@@ -78,14 +77,14 @@ export default async function CollectionDetailPage({
             ))}
           </div>
         ) : (
-          <EmptyState
-            title="This collection is empty"
-            description={
-              isOwner
-                ? "Add games from a game detail page in the next commit."
+            <EmptyState
+              title="This collection is empty"
+              description={
+                isOwner
+                ? "Add games from a game detail page to start building this collection."
                 : "The owner has not added any games yet."
-            }
-          />
+              }
+            />
         )}
       </div>
     );

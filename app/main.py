@@ -1,9 +1,10 @@
-from fastapi import FastAPI
-from fastapi_mcp import FastApiMCP
+from fastapi import Depends, FastAPI
+from fastapi_mcp import AuthConfig, FastApiMCP
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core import settings
-from app.core.config import validate_runtime_settings
+from app.core.auth import get_current_user
+from app.core.config import is_development_environment, validate_runtime_settings
 from app.core.error_handlers import register_exception_handlers
 from app.core.transport_security import HTTPSRedirectMiddleware, SecurityHeadersMiddleware
 from app.routers.analytics import router as analytics_router
@@ -29,10 +30,19 @@ MCP_READONLY_TAGS = [
     'analytics',
 ]
 
+PROTECTED_ROUTE_DEPENDENCIES = [Depends(get_current_user)]
+
 
 def create_app() -> FastAPI:
     validate_runtime_settings(settings)
-    app = FastAPI(title=settings.app_name, version=settings.app_version)
+    development_mode = is_development_environment(settings)
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        docs_url='/docs' if development_mode else None,
+        redoc_url='/redoc' if development_mode else None,
+        openapi_url='/openapi.json' if development_mode else None,
+    )
     if settings.allowed_hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(
@@ -46,17 +56,18 @@ def create_app() -> FastAPI:
         trusted_proxy_cidrs=tuple(settings.trusted_proxy_cidrs),
     )
     register_exception_handlers(app)
-    app.include_router(health_router, prefix=settings.api_prefix)
-    app.include_router(jwks_router)
+    protected_dependencies = None if development_mode else PROTECTED_ROUTE_DEPENDENCIES
+    app.include_router(health_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(jwks_router, dependencies=protected_dependencies)
     app.include_router(auth_router, prefix=settings.api_prefix)
-    app.include_router(games_router, prefix=settings.api_prefix)
-    app.include_router(search_router, prefix=settings.api_prefix)
-    app.include_router(genres_router, prefix=settings.api_prefix)
-    app.include_router(tags_router, prefix=settings.api_prefix)
-    app.include_router(developers_router, prefix=settings.api_prefix)
-    app.include_router(publishers_router, prefix=settings.api_prefix)
-    app.include_router(collections_router, prefix=settings.api_prefix)
-    app.include_router(analytics_router, prefix=settings.api_prefix)
+    app.include_router(games_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(search_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(genres_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(tags_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(developers_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(publishers_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(collections_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
+    app.include_router(analytics_router, prefix=settings.api_prefix, dependencies=protected_dependencies)
 
     if settings.enable_mcp_server:
         mcp = FastApiMCP(
@@ -64,6 +75,7 @@ def create_app() -> FastAPI:
             name=settings.app_name,
             describe_all_responses=True,
             include_tags=MCP_READONLY_TAGS,
+            auth_config=AuthConfig(dependencies=PROTECTED_ROUTE_DEPENDENCIES) if not development_mode else None,
         )
         mcp.mount(mount_path=settings.mcp_mount_path)
         app.state.mcp = mcp

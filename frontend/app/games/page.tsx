@@ -10,6 +10,7 @@ import { PaginationNav } from "@/components/ui/pagination-nav";
 import { listGames } from "@/lib/api/games";
 import { listDevelopers, listGenres, listPublishers, listTags } from "@/lib/api/taxonomy";
 import { buildQueryString } from "@/lib/api/normalizers";
+import { requireSession } from "@/lib/auth/guards";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -45,6 +46,7 @@ export default async function GamesPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const { token } = await requireSession();
   const rawParams = await searchParams;
 
   const values = {
@@ -74,11 +76,11 @@ export default async function GamesPage({
 
   const [gamesResult, genresResult, tagsResult, developersResult, publishersResult] =
     await Promise.allSettled([
-      listGames(values),
-      listGenres(1, 40),
-      listTags(1, 40),
-      listDevelopers(1, 40),
-      listPublishers(1, 40),
+      listGames(token, values),
+      listGenres(token, 1, 40),
+      listTags(token, 1, 40),
+      listDevelopers(token, 1, 40),
+      listPublishers(token, 1, 40),
     ]);
 
   if (gamesResult.status !== "fulfilled") {

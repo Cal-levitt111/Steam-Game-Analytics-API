@@ -70,4 +70,18 @@ def test_development_environment_exposes_runtime_docs(monkeypatch) -> None:
     client = TestClient(app)
 
     assert client.get('/docs').status_code == 200
+    assert client.get('/redoc').status_code == 200
     assert client.get('/openapi.json').status_code == 200
+
+
+def test_openapi_operation_ids_use_endpoint_names(monkeypatch) -> None:
+    monkeypatch.setattr(settings, 'environment', 'development')
+    monkeypatch.setattr(settings, 'force_https', False)
+    monkeypatch.setattr(settings, 'allowed_hosts', ['127.0.0.1', 'testserver', 'localhost'])
+
+    app = create_app()
+    schema = app.openapi()
+
+    assert schema['paths']['/api/v1/auth/login']['post']['operationId'] == 'login'
+    assert schema['paths']['/api/v1/games']['get']['operationId'] == 'list_games_route'
+    assert schema['paths']['/api/v1/analytics/release-trends']['get']['operationId'] == 'release_trends'

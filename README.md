@@ -18,6 +18,7 @@ API base path: `/api/v1`
 
 - In `ENVIRONMENT=development`, Swagger/OpenAPI is available at `/docs`, `/redoc`, and `/openapi.json`.
 - In `ENVIRONMENT=development`, read-only backend routes are public for easier local testing.
+- In `ENVIRONMENT=development`, routes that explicitly declare bearer auth still appear as protected in Swagger UI and can be exercised with the `Authorize` button.
 - In `ENVIRONMENT=production`, `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are the only public backend endpoints.
 - In `ENVIRONMENT=production`, all other backend routes require a valid bearer token, including health, JWKS, collections/public, analytics, taxonomy, and MCP when enabled.
 - The frontend only leaves `/auth` publicly accessible. All other application pages redirect to `/auth` when there is no valid session.
@@ -119,6 +120,8 @@ Default local URLs:
 - Frontend: `http://localhost:3000`
 - Backend: `http://127.0.0.1:8000`
 - Local API docs: `http://127.0.0.1:8000/docs`
+- Local ReDoc: `http://127.0.0.1:8000/redoc`
+- Local OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
 
 ## Local Run Flow
 
@@ -140,7 +143,9 @@ Default local URLs:
 
 Hosted/generated API docs: `<add generated API docs link here>`
 
-In local development, FastAPI serves Swagger and OpenAPI directly at `/docs` and `/openapi.json`.
+In local development, FastAPI serves Swagger at `/docs`, ReDoc at `/redoc`, and the raw OpenAPI schema at `/openapi.json`.
+
+Swagger UI shows the protected routes and lets testers paste a bearer token into the `Authorize` dialog instead of calling protected endpoints manually with `curl`.
 
 If you need to generate the schema file manually for external documentation generation:
 

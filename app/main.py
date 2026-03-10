@@ -1,4 +1,7 @@
+from collections.abc import Callable
+
 from fastapi import Depends, FastAPI
+from fastapi.routing import APIRoute
 from fastapi_mcp import AuthConfig, FastApiMCP
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -33,12 +36,27 @@ MCP_READONLY_TAGS = [
 PROTECTED_ROUTE_DEPENDENCIES = [Depends(get_current_user)]
 
 
+def _build_operation_id_generator() -> Callable[[APIRoute], str]:
+    seen: dict[str, int] = {}
+
+    def generate_operation_id(route: APIRoute) -> str:
+        base = (route.name or 'operation').replace(' ', '_')
+        duplicate_index = seen.get(base, 0)
+        seen[base] = duplicate_index + 1
+        if duplicate_index == 0:
+            return base
+        return f'{base}_{duplicate_index + 1}'
+
+    return generate_operation_id
+
+
 def create_app() -> FastAPI:
     validate_runtime_settings(settings)
     development_mode = is_development_environment(settings)
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
+        generate_unique_id_function=_build_operation_id_generator(),
         docs_url='/docs' if development_mode else None,
         redoc_url='/redoc' if development_mode else None,
         openapi_url='/openapi.json' if development_mode else None,

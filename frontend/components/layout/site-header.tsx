@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Gamepad2, Search, Shield } from "lucide-react";
+import { BarChart3, Blocks, Gamepad2, Search, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -7,6 +7,7 @@ const navItems = [
   { href: "/games", label: "Games", icon: Gamepad2 },
   { href: "/search", label: "Search", icon: Search },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/mcp", label: "MCP", icon: Blocks },
   { href: "/collections", label: "Collections", icon: Shield },
 ];
 

@@ -55,6 +55,7 @@ Local URLs:
 - `/games/[id]`
 - `/search`
 - `/analytics`
+- `/mcp`
 - `/collections`
 - `/collections/public`
 - `/collections/[id]`
@@ -66,7 +67,28 @@ Local URLs:
 3. Register an account on `/auth`.
 4. Create a collection on `/collections`.
 5. Open a game detail page and add the game to the collection.
-6. Open `/analytics` and `/search` to verify authenticated read-only pages load successfully.
+6. Open `/analytics`, `/search`, and `/mcp` to verify authenticated read-only pages load successfully.
+
+## Local MCP Testing In VS Code
+
+1. Start the backend locally with `uvicorn app.main:app --reload`.
+2. Create or update `../.vscode/mcp.json` with:
+
+```json
+{
+  "servers": {
+    "steam-api": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}
+```
+
+3. Reload VS Code if needed.
+4. Test the MCP server against the local backend.
+
+In development the MCP mount is open for local testing. In production it is protected when enabled.
 
 ## Scripts
 

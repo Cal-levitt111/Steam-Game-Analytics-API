@@ -131,6 +131,7 @@ Default local URLs:
    - `/games/[id]`
    - `/search`
    - `/analytics`
+   - `/mcp`
    - `/collections`
    - `/collections/public`
    - `/collections/[id]`
@@ -146,6 +147,31 @@ If you need to generate the schema file manually for external documentation gene
 ```powershell
 python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
 ```
+
+## Local MCP Testing In VS Code
+
+To test the MCP server locally in VS Code:
+
+1. Start the backend locally with:
+   ```powershell
+   uvicorn app.main:app --reload
+   ```
+2. Confirm the MCP mount is reachable at `http://127.0.0.1:8000/mcp`.
+3. Create or update `.vscode/mcp.json` in the repository root:
+   ```json
+   {
+     "servers": {
+       "steam-api": {
+         "type": "http",
+         "url": "http://127.0.0.1:8000/mcp"
+       }
+     }
+   }
+   ```
+4. Reload VS Code if the MCP server is not detected immediately.
+5. Use the MCP server from your VS Code MCP workflow.
+
+Local development leaves the MCP mount open for testing. In production, when MCP is enabled, the mount is protected by bearer authentication.
 
 ## Coursework Alignment
 

@@ -1,7 +1,7 @@
 # Codex Instructions
 
 ## Project Overview
-Steam-Game-Analytics-API is a FastAPI backend for browsing and analyzing Steam game data.
+Steam-Game-Analytics-API is a full-stack coursework project built around a FastAPI backend and a Next.js frontend for exploring and analysing Steam game data.
 
 Core capabilities implemented so far:
 - Authentication with JWT bearer tokens (`register`, `login`, `me`, `update me`).
@@ -13,6 +13,7 @@ Core capabilities implemented so far:
 - Analytics endpoints for trends, distribution, and aggregate breakdowns.
 - Seed/full CSV import pipeline into Postgres.
 - Embedding generation pipeline (`scripts/generate_embeddings.py`) for local similarity setup.
+- Next.js frontend with session-cookie auth, protected page guards, and server-side API consumption.
 - MCP server compatibility mounted at `/mcp` with read-only tool exposure.
 
 API base path: `/api/v1`
@@ -37,6 +38,7 @@ Key infra files:
 - `.env.example`
 - `alembic.ini`
 - `app/main.py`
+- `frontend/package.json`
 
 ## Repository Layout
 - `app/main.py`: FastAPI app factory and router registration.
@@ -51,7 +53,8 @@ Key infra files:
 - `scripts/generate_embeddings.py`: one-off/local embedding generation.
 - `scripts/generate_seed_from_dataset.py`: seed extraction helper.
 - `tests/`: API/service/migration smoke tests.
-- `docs/`: architecture and endpoint matrix documents.
+- `frontend/`: Next.js frontend.
+- `docs/`: architecture, endpoint matrix, and deployment/security documents.
 
 ## How Requests Flow
 Typical request path:
@@ -60,6 +63,11 @@ Typical request path:
 3. Service layer enforces domain rules and raises typed `AppException` for expected failures.
 4. Repository layer executes queries.
 5. Router serializes response using schemas or plain dict envelopes.
+
+Frontend request path:
+1. Next.js server component or server action reads the `sga_session` cookie.
+2. The frontend API client forwards the bearer token to FastAPI.
+3. Backend auth dependencies validate the token before serving data.
 
 Error handling:
 - `app/core/error_handlers.py` centralizes exception handling.
@@ -82,7 +90,7 @@ Expected variables:
 - `MCP_MOUNT_PATH`
 
 Important note:
-- Current defaults are development-friendly, not production-safe (`SECRET_KEY` placeholder and 24h tokens in example).
+- Current defaults are development-friendly, not production-safe (`SECRET_KEY` placeholder and short-lived local settings).
 
 ## Database and Migrations
 ### Current migration chain
@@ -118,15 +126,18 @@ FTS behavior:
 ## Auth and Security Model
 Implemented:
 - Password hashing: PBKDF2-SHA256 + salt.
-- JWT access token creation/verification (`HS256`).
+- JWT access token creation/verification (`RS256`, with optional legacy HS256 acceptance window).
 - Expiry enforced (`exp` claim).
 - `HTTPBearer` auth dependency for protected routes.
+- All backend routes except `register` and `login` require auth.
+- Frontend routes except `/auth` require a valid session.
+- Interactive runtime docs are disabled so the deployed app does not expose a public OpenAPI surface.
+- Database-backed auth rate limiting on register/login.
 - Distinct error codes for invalid/expired/missing auth.
 
 Not yet implemented (advanced hardening):
 - Refresh token rotation and token revocation store.
-- Rate limiting / lockout.
-- HTTPS/HSTS enforcement in app layer.
+- Redis-backed caching or distributed rate limiting.
 
 ## Import Pipeline (`scripts/import_games.py`)
 Importer supports both normalized and Kaggle-style CSV headers.
@@ -166,7 +177,7 @@ Useful flags:
 All routes are under `/api/v1`.
 
 ### Health
-- `GET /health`
+- `GET /health` (auth required)
 - Returns: `{"status":"ok"}`
 
 ### Auth
@@ -199,6 +210,7 @@ All routes are under `/api/v1`.
 - Implementation: `fastapi-mcp` wraps selected FastAPI operations as tools.
 - Exposed tags: `health`, `games`, `search`, `genres`, `tags`, `developers`, `publishers`, `analytics`.
 - Excluded from MCP exposure: `auth` and `collections`.
+- MCP transport endpoints require auth when enabled.
 
 ### Search
 - `GET /search?q=<query>`
@@ -232,7 +244,7 @@ List endpoints return pagination envelope. Detail endpoints generally return `{"
 ### Collections
 - `POST /collections` (auth)
 - `GET /collections` (auth; current user)
-- `GET /collections/public`
+- `GET /collections/public` (auth)
 - `GET /collections/{collection_id}` (owner or public)
 - `PUT /collections/{collection_id}` (owner)
 - `DELETE /collections/{collection_id}` (owner)
@@ -278,9 +290,17 @@ List routes include:
 7. `python scripts/import_games.py --mode seed`
 8. `python scripts/generate_embeddings.py --mode seed --only-missing`
 9. `uvicorn app.main:app --reload`
+10. `cd frontend`
+11. `Copy-Item .env.example .env.local`
+12. `npm install`
+13. `npm run dev`
 
-Docs UI:
-- `http://localhost:8000/docs`
+Open the frontend at:
+- `http://localhost:3000/auth`
+
+OpenAPI generation:
+- Runtime docs are disabled.
+- Generate schema locally with: `python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json`
 
 ## Testing Strategy
 Run full suite:
@@ -295,11 +315,11 @@ Current test files:
 - `test_migrations.py`: migration SQL smoke check.
 - `test_game_similarity.py`: similar endpoint shape and error handling.
 - `test_mcp.py`: MCP mount and read-only exposure boundary checks.
+- Frontend tests: Vitest unit tests and Playwright end-to-end checks in `frontend/tests/`.
 
 ## Known Caveats and Follow-ups
 - Security posture is baseline/dev-friendly; production hardening is pending.
 - API response wrapping is intentionally mixed in a few places (`/games/{id}` and auth endpoints return plain typed models).
-- README references an older seed filename in places; importer logic now auto-resolves available seed CSVs.
 - First embedding generation downloads the model from Hugging Face and can take time depending on network.
 - On some Windows Docker setups, Postgres may print collation-version warnings after image changes; recreating the DB volume is the simplest local fix.
 
@@ -322,4 +342,4 @@ As of this document:
 - Seed import and endpoint testing are operational.
 - pgvector similarity feature is implemented and tested.
 - MCP server exposure is implemented.
-- Frontend remains deferred.
+- Next.js frontend is implemented and protected by session-based access control.

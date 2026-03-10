@@ -7,11 +7,13 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import get_db
 from app.main import app
 from app.models.game import Developer, Genre, Publisher, Tag, game_developers, game_genres, game_publishers, game_tags
+from tests.auth_helpers import create_auth_tables, issue_auth_headers
 
 
 @pytest.fixture()
-def taxonomy_client() -> TestClient:
+def taxonomy_client() -> tuple[TestClient, dict[str, str]]:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    create_auth_tables(engine)
 
     with engine.begin() as conn:
         conn.exec_driver_sql(
@@ -92,39 +94,42 @@ def taxonomy_client() -> TestClient:
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as client:
-        yield client
+        yield client, issue_auth_headers(client, email='taxonomy@example.com')
     app.dependency_overrides.clear()
 
 
-def test_tags_list_and_detail_counts(taxonomy_client: TestClient) -> None:
-    list_response = taxonomy_client.get('/api/v1/tags')
+def test_tags_list_and_detail_counts(taxonomy_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = taxonomy_client
+    list_response = client.get('/api/v1/tags', headers=headers)
     assert list_response.status_code == 200
     body = list_response.json()
     assert body['data'][0]['slug'] == 'indie'
     assert body['data'][0]['game_count'] == 2
 
-    detail_response = taxonomy_client.get('/api/v1/tags/indie')
+    detail_response = client.get('/api/v1/tags/indie', headers=headers)
     assert detail_response.status_code == 200
     assert detail_response.json()['data']['game_count'] == 2
 
 
-def test_slug_not_found_responses(taxonomy_client: TestClient) -> None:
-    publisher_response = taxonomy_client.get('/api/v1/publishers/missing')
+def test_slug_not_found_responses(taxonomy_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = taxonomy_client
+    publisher_response = client.get('/api/v1/publishers/missing', headers=headers)
     assert publisher_response.status_code == 404
     assert publisher_response.json()['error']['code'] == 'RESOURCE_NOT_FOUND'
 
-    genre_games_response = taxonomy_client.get('/api/v1/genres/missing/games')
+    genre_games_response = client.get('/api/v1/genres/missing/games', headers=headers)
     assert genre_games_response.status_code == 404
     assert genre_games_response.json()['error']['code'] == 'RESOURCE_NOT_FOUND'
 
 
-def test_developer_and_publisher_counts(taxonomy_client: TestClient) -> None:
-    dev_response = taxonomy_client.get('/api/v1/developers?q=val')
+def test_developer_and_publisher_counts(taxonomy_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = taxonomy_client
+    dev_response = client.get('/api/v1/developers?q=val', headers=headers)
     assert dev_response.status_code == 200
     assert len(dev_response.json()['data']) == 1
     assert dev_response.json()['data'][0]['slug'] == 'valve'
     assert dev_response.json()['data'][0]['game_count'] == 2
 
-    pub_response = taxonomy_client.get('/api/v1/publishers')
+    pub_response = client.get('/api/v1/publishers', headers=headers)
     assert pub_response.status_code == 200
     assert pub_response.json()['data'][0]['game_count'] == 2

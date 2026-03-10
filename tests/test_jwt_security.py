@@ -13,6 +13,7 @@ from app.core.security import JWT_ALGORITHM, create_access_token, decode_access_
 from app.main import app
 from app.models.auth_rate_limit import AuthRateLimitCounter
 from app.models.user import User
+from tests.auth_helpers import issue_auth_headers
 
 
 @pytest.fixture()
@@ -60,7 +61,8 @@ def test_login_token_uses_rs256_kid_and_claims(jwt_client: TestClient) -> None:
 
 
 def test_jwks_endpoint_exposes_active_key(jwt_client: TestClient) -> None:
-    response = jwt_client.get('/.well-known/jwks.json')
+    headers = issue_auth_headers(jwt_client, email='jwks@example.com')
+    response = jwt_client.get('/.well-known/jwks.json', headers=headers)
     assert response.status_code == 200
     body = response.json()
     keys = body['keys']

@@ -2,6 +2,8 @@
 
 This API signs access tokens with RS256 and publishes verification keys at `/.well-known/jwks.json`.
 
+The JWKS endpoint is auth-gated, so operational checks against it must include a valid bearer token.
+
 ## One-time Key Generation
 
 Generate a new RSA keypair:
@@ -48,3 +50,9 @@ If migrating from older HS256 tokens, set a short cutoff:
 - `JWT_ACCEPT_LEGACY_HS256_UNTIL=2026-04-01T00:00:00Z`
 
 After cutoff passes, remove this variable.
+
+## Verification Example
+
+```powershell
+curl.exe -H "Authorization: Bearer <admin-or-test-token>" http://127.0.0.1:8000/.well-known/jwks.json
+```

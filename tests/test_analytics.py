@@ -6,11 +6,13 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.main import app
+from tests.auth_helpers import create_auth_tables, issue_auth_headers
 
 
 @pytest.fixture()
-def analytics_client() -> TestClient:
+def analytics_client() -> tuple[TestClient, dict[str, str]]:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    create_auth_tables(engine)
 
     with engine.begin() as conn:
         conn.execute(
@@ -85,19 +87,20 @@ def analytics_client() -> TestClient:
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as client:
-        yield client
+        yield client, issue_auth_headers(client, email='analytics@example.com')
     app.dependency_overrides.clear()
 
 
-def test_free_vs_paid_and_platform_breakdown(analytics_client: TestClient) -> None:
-    free_paid = analytics_client.get('/api/v1/analytics/free-vs-paid')
+def test_free_vs_paid_and_platform_breakdown(analytics_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = analytics_client
+    free_paid = client.get('/api/v1/analytics/free-vs-paid', headers=headers)
     assert free_paid.status_code == 200
     body = free_paid.json()
     assert 'generated_at' in body
     assert 'query_params' in body
     assert len(body['data']) == 2
 
-    platform = analytics_client.get('/api/v1/analytics/platform-breakdown')
+    platform = client.get('/api/v1/analytics/platform-breakdown', headers=headers)
     assert platform.status_code == 200
     row = platform.json()['data'][0]
     assert row['total_games'] == 4
@@ -105,8 +108,9 @@ def test_free_vs_paid_and_platform_breakdown(analytics_client: TestClient) -> No
     assert row['linux'] == 2
 
 
-def test_review_sentiment_distribution_shape(analytics_client: TestClient) -> None:
-    response = analytics_client.get('/api/v1/analytics/review-sentiment')
+def test_review_sentiment_distribution_shape(analytics_client: tuple[TestClient, dict[str, str]]) -> None:
+    client, headers = analytics_client
+    response = client.get('/api/v1/analytics/review-sentiment', headers=headers)
     assert response.status_code == 200
     data = response.json()['data']
     assert len(data) == 10

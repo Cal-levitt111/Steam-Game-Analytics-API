@@ -11,8 +11,10 @@ import {
   getTopDevelopers,
   getTopGenres,
 } from "@/lib/api/analytics";
+import { requireSession } from "@/lib/auth/guards";
 
 export default async function AnalyticsPage() {
+  const { token } = await requireSession();
   const [
     releaseTrendsResult,
     topGenresResult,
@@ -23,14 +25,14 @@ export default async function AnalyticsPage() {
     reviewSentimentResult,
     scoreByGenreResult,
   ] = await Promise.allSettled([
-    getReleaseTrends(),
-    getTopGenres(8),
-    getTopDevelopers({ limit: 8 }),
-    getPriceDistribution(),
-    getFreeVsPaid(),
-    getPlatformBreakdown(),
-    getReviewSentiment(),
-    getScoreByGenre(),
+    getReleaseTrends(token),
+    getTopGenres(token, 8),
+    getTopDevelopers(token, { limit: 8 }),
+    getPriceDistribution(token),
+    getFreeVsPaid(token),
+    getPlatformBreakdown(token),
+    getReviewSentiment(token),
+    getScoreByGenre(token),
   ]);
 
   const data = {

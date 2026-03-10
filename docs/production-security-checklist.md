@@ -1,6 +1,8 @@
 # Production Security Checklist
 
-Use this checklist before exposing the API publicly.
+Use this checklist before deploying the application.
+
+The runtime is now default-private: all backend routes except register/login require auth, the frontend redirects unauthenticated users to `/auth`, and interactive runtime docs are disabled.
 
 ## Required Runtime Settings
 
@@ -19,6 +21,8 @@ The app now fails startup in production if `FORCE_HTTPS`, `ALLOWED_HOSTS`, `SECR
 - Terminate TLS at the reverse proxy or load balancer.
 - Forward `X-Forwarded-Proto` only from trusted proxy CIDRs.
 - Keep `ENABLE_MCP_SERVER=false` unless MCP exposure is explicitly required.
+- Confirm only `POST /api/v1/auth/register` and `POST /api/v1/auth/login` remain public.
+- Confirm hosted runtime docs are not exposed; generate and host API docs separately if needed.
 - Keep `ACCESS_TOKEN_EXPIRE_MINUTES` short. The example default is `30`.
 
 ## Operational Checks
@@ -26,4 +30,6 @@ The app now fails startup in production if `FORCE_HTTPS`, `ALLOWED_HOSTS`, `SECR
 - Rotate JWT signing keys on a fixed cadence and keep the previous public key in `JWT_ADDITIONAL_PUBLIC_KEYS` during overlap.
 - Remove `JWT_ACCEPT_LEGACY_HS256_UNTIL` after migration windows expire.
 - Review auth rate-limit thresholds for your real traffic profile.
+- Verify frontend session cookies are marked `Secure` in production.
+- Verify `/.well-known/jwks.json` and `/api/v1/health` are only reachable with auth.
 - Run the CI security checks (`bandit`, `pip-audit`, `gitleaks`) on each pull request.

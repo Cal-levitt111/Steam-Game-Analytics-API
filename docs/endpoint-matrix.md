@@ -2,7 +2,7 @@
 
 ## Endpoint Matrix
 
-All routes below are implemented in the running application. Authentication is required for every route except `POST /api/v1/auth/register` and `POST /api/v1/auth/login`.
+All routes below are implemented in the running application. The `Auth` column reflects production behavior. In `ENVIRONMENT=development`, Swagger/OpenAPI and read-only routes are left open for local testing.
 
 | Resource Group | Endpoints | Auth |
 |---|---|---|
@@ -22,7 +22,7 @@ All routes below are implemented in the running application. Authentication is r
 
 Total implemented endpoints: 41
 
-Runtime OpenAPI/Swagger endpoints are intentionally disabled. Generate and host API docs separately from the OpenAPI schema if required for submission or deployment.
+Runtime OpenAPI/Swagger endpoints are available in development and disabled in production. Generate and host API docs separately from the OpenAPI schema if required for submission or deployment.
 
 ## Coursework Criteria Mapping
 
@@ -33,7 +33,7 @@ Runtime OpenAPI/Swagger endpoints are intentionally disabled. Generate and host 
 | SQL database usage | PostgreSQL schema in 3NF with dimension tables, junction tables, collections, and migrations |
 | JSON + status codes | Standard JSON responses and standardised error envelope across handled errors |
 | Authentication | JWT bearer auth with RS256 signing, rate limiting, ownership checks, and protected application surface |
-| API documentation | OpenAPI schema can be generated locally and linked externally; runtime docs are intentionally not exposed |
+| API documentation | OpenAPI schema can be generated locally and linked externally; runtime docs are available in development and disabled in production |
 | Testing | Pytest suite for auth, collections, analytics, taxonomy, similarity, migrations, transport security, MCP, and error handling |
 | Architecture quality | Layered router -> service -> repository structure plus typed schemas and migrations |
 | Advanced querying | PostgreSQL full-text search, pgvector similarity, pagination/filtering, and aggregate analytics |

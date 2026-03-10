@@ -2,7 +2,7 @@
 
 This API signs access tokens with RS256 and publishes verification keys at `/.well-known/jwks.json`.
 
-The JWKS endpoint is auth-gated, so operational checks against it must include a valid bearer token.
+The JWKS endpoint is auth-gated in production, so operational checks there must include a valid bearer token.
 
 ## One-time Key Generation
 

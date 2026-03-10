@@ -129,9 +129,10 @@ Implemented:
 - JWT access token creation/verification (`RS256`, with optional legacy HS256 acceptance window).
 - Expiry enforced (`exp` claim).
 - `HTTPBearer` auth dependency for protected routes.
-- All backend routes except `register` and `login` require auth.
+- In production, all backend routes except `register` and `login` require auth.
+- In development, docs and read-only routes stay open for local testing.
 - Frontend routes except `/auth` require a valid session.
-- Interactive runtime docs are disabled so the deployed app does not expose a public OpenAPI surface.
+- Interactive runtime docs are enabled only in development.
 - Database-backed auth rate limiting on register/login.
 - Distinct error codes for invalid/expired/missing auth.
 
@@ -299,7 +300,7 @@ Open the frontend at:
 - `http://localhost:3000/auth`
 
 OpenAPI generation:
-- Runtime docs are disabled.
+- In development, docs are available at `http://127.0.0.1:8000/docs`.
 - Generate schema locally with: `python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json`
 
 ## Testing Strategy

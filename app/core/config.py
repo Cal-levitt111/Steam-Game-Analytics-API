@@ -68,6 +68,10 @@ def is_production_environment(current_settings: Settings) -> bool:
     return current_settings.environment.strip().lower() == 'production'
 
 
+def is_development_environment(current_settings: Settings) -> bool:
+    return current_settings.environment.strip().lower() == 'development'
+
+
 def validate_runtime_settings(current_settings: Settings) -> None:
     if not is_production_environment(current_settings):
         return

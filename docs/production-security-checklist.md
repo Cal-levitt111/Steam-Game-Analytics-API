@@ -2,7 +2,7 @@
 
 Use this checklist before deploying the application.
 
-The runtime is now default-private: all backend routes except register/login require auth, the frontend redirects unauthenticated users to `/auth`, and interactive runtime docs are disabled.
+In production, the runtime is default-private: all backend routes except register/login require auth, the frontend redirects unauthenticated users to `/auth`, and interactive runtime docs are disabled.
 
 ## Required Runtime Settings
 

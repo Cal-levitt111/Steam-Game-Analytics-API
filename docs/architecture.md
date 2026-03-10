@@ -65,12 +65,13 @@ Errors are normalised in `app/core/error_handlers.py` to:
 
 ## Authentication Model
 
-The runtime now uses a default-private access model:
+The runtime now uses an environment-aware access model:
 
-- `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are public bootstrap routes.
-- All remaining backend routes require JWT bearer authentication.
+- In development, interactive docs are enabled and read-only backend routes stay public for local testing.
+- In production, `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are the only public bootstrap routes.
+- In production, all remaining backend routes require JWT bearer authentication.
 - JWT access tokens are signed with RS256 and include a `kid` header.
-- JWKS publication remains available at `/.well-known/jwks.json`, but it is also auth-gated.
+- JWKS publication remains available at `/.well-known/jwks.json`; it is protected in production.
 - Login and register requests are rate-limited with database-backed counters.
 
 The frontend mirrors this with a BFF pattern:
@@ -90,7 +91,7 @@ When `ENABLE_MCP_SERVER=true`, the app mounts an MCP transport at `/mcp` and `/m
 
 ## Deliberate Runtime Choices
 
-- Interactive runtime docs are disabled so the hosted application does not expose a public OpenAPI surface.
+- Interactive runtime docs are enabled only in development.
 - The API remains versioned under `/api/v1`.
 - Import scripts are idempotent and support both seed and full-dataset workflows.
 - Embeddings are generated offline instead of during request handling.

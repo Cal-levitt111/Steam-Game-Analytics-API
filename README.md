@@ -16,10 +16,12 @@ API base path: `/api/v1`
 
 ## Access Model
 
-- `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are the only public backend endpoints.
-- All other backend routes require a valid bearer token, including health, JWKS, collections/public, analytics, taxonomy, and MCP when enabled.
+- In `ENVIRONMENT=development`, Swagger/OpenAPI is available at `/docs`, `/redoc`, and `/openapi.json`.
+- In `ENVIRONMENT=development`, read-only backend routes are public for easier local testing.
+- In `ENVIRONMENT=production`, `POST /api/v1/auth/register` and `POST /api/v1/auth/login` are the only public backend endpoints.
+- In `ENVIRONMENT=production`, all other backend routes require a valid bearer token, including health, JWKS, collections/public, analytics, taxonomy, and MCP when enabled.
 - The frontend only leaves `/auth` publicly accessible. All other application pages redirect to `/auth` when there is no valid session.
-- Interactive runtime docs (`/docs`, `/redoc`, `/openapi.json`) are intentionally disabled so the hosted app does not expose an unauthenticated API surface.
+- Interactive runtime docs are intentionally disabled outside development so the hosted app does not expose an unauthenticated API surface.
 
 ## Stack
 
@@ -116,6 +118,7 @@ Default local URLs:
 
 - Frontend: `http://localhost:3000`
 - Backend: `http://127.0.0.1:8000`
+- Local API docs: `http://127.0.0.1:8000/docs`
 
 ## Local Run Flow
 
@@ -136,7 +139,9 @@ Default local URLs:
 
 Hosted/generated API docs: `<add generated API docs link here>`
 
-If you need the OpenAPI schema locally for external documentation generation:
+In local development, FastAPI serves Swagger and OpenAPI directly at `/docs` and `/openapi.json`.
+
+If you need to generate the schema file manually for external documentation generation:
 
 ```powershell
 python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
@@ -180,7 +185,7 @@ npm run test:e2e
 
 - The app refuses to start in production without `FORCE_HTTPS`, `ALLOWED_HOSTS`, a non-placeholder `SECRET_KEY`, and active JWT key material.
 - Auth endpoints are rate-limited by database-backed counters.
-- JWKS remains available for key verification, but it is now protected like the rest of the non-bootstrap API.
+- JWKS remains available for key verification. It is public in development and protected in production.
 - `ENABLE_MCP_SERVER=false` is the safest default for deployment. If enabled, the MCP transport is still auth-gated.
 - See [docs/production-security-checklist.md](docs/production-security-checklist.md) before deployment.
 

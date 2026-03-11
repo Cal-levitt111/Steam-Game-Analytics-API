@@ -2,6 +2,9 @@ import argparse
 import os
 
 import psycopg
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://steam:steam@localhost:5432/steamgames')
 DEFAULT_MODEL = os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')

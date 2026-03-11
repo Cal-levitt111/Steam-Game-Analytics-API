@@ -5,13 +5,17 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pandas as pd
 import psycopg
+from dotenv import load_dotenv
 from slugify import slugify
 
+load_dotenv()
+
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://steam:steam@localhost:5432/steamgames')
+IMPORT_BATCH_SIZE = int(os.getenv('IMPORT_BATCH_SIZE', '2000'))
 SEED_DATASET_CANDIDATES = [
     Path('data/seed/steam_games_seed.csv'),
     Path('data/seed/steam_game_seed_1000_2.csv'),
@@ -115,6 +119,18 @@ GAME_UPSERT_COLUMNS = [
     'screenshots',
     'movies',
 ]
+
+
+def log_progress(message: str) -> None:
+    print(message, flush=True)
+
+
+def chunked_rows(
+    rows: list[tuple[Any, ...]],
+    chunk_size: int = IMPORT_BATCH_SIZE,
+) -> Iterator[tuple[int, list[tuple[Any, ...]]]]:
+    for start in range(0, len(rows), chunk_size):
+        yield start, rows[start:start + chunk_size]
 
 
 def clean_text(value: Any) -> str | None:
@@ -319,7 +335,10 @@ def upsert_dimension_table(conn: psycopg.Connection, table_name: str, values: di
             return
 
         sql = f"INSERT INTO {table_name} (name, slug) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
-        cur.executemany(sql, rows)
+        total = len(rows)
+        for start, chunk in chunked_rows(rows):
+            cur.executemany(sql, chunk)
+            log_progress(f'[{table_name}] inserted {min(start + len(chunk), total)}/{total}')
 
 
 def fetch_dimension_ids(conn: psycopg.Connection, table_name: str) -> dict[str, int]:
@@ -391,22 +410,45 @@ def upsert_games(conn: psycopg.Connection, game_rows: list[tuple[Any, ...]]) -> 
         return
 
     insert_columns = ',\n        '.join(GAME_UPSERT_COLUMNS)
-    placeholders = ', '.join(['%s'] * len(GAME_UPSERT_COLUMNS))
     update_columns = ',\n        '.join(
         f'{column} = EXCLUDED.{column}' for column in GAME_UPSERT_COLUMNS if column != 'steam_app_id'
     )
 
-    sql = f"""
-    INSERT INTO games (
-        {insert_columns}
-    )
-    VALUES ({placeholders})
-    ON CONFLICT (steam_app_id) DO UPDATE SET
-        {update_columns};
-    """
-
     with conn.cursor() as cur:
-        cur.executemany(sql, game_rows)
+        temp_table_name = 'temp_game_import'
+        copy_columns = ', '.join(GAME_UPSERT_COLUMNS)
+        cur.execute(f'DROP TABLE IF EXISTS {temp_table_name};')
+        cur.execute(
+            f"""
+            CREATE TEMP TABLE {temp_table_name} AS
+            SELECT {copy_columns}
+            FROM games
+            WITH NO DATA;
+            """
+        )
+
+        total = len(game_rows)
+        log_progress(f'[games] staging {total} rows via COPY')
+        with cur.copy(f'COPY {temp_table_name} ({copy_columns}) FROM STDIN') as copy:
+            for start, chunk in chunked_rows(game_rows):
+                for row in chunk:
+                    copy.write_row(row)
+                log_progress(f'[games] staged {min(start + len(chunk), total)}/{total}')
+
+        log_progress('[games] applying staged upsert')
+        cur.execute(
+            f"""
+            INSERT INTO games (
+                {insert_columns}
+            )
+            SELECT
+                {copy_columns}
+            FROM {temp_table_name}
+            ON CONFLICT (steam_app_id) DO UPDATE SET
+                {update_columns};
+            """
+        )
+        log_progress('[games] staged upsert complete')
 
 
 def fetch_game_ids(conn: psycopg.Connection, steam_app_ids: list[int]) -> dict[int, int]:
@@ -419,9 +461,35 @@ def fetch_game_ids(conn: psycopg.Connection, steam_app_ids: list[int]) -> dict[i
 def insert_junction_rows(conn: psycopg.Connection, table_name: str, foreign_key: str, rows: list[tuple[int, int]]) -> None:
     if not rows:
         return
-    sql = f"INSERT INTO {table_name} (game_id, {foreign_key}) VALUES (%s, %s) ON CONFLICT DO NOTHING;"
     with conn.cursor() as cur:
-        cur.executemany(sql, rows)
+        temp_table_name = f'temp_{table_name}_import'
+        cur.execute(f'DROP TABLE IF EXISTS {temp_table_name};')
+        cur.execute(
+            f"""
+            CREATE TEMP TABLE {temp_table_name} AS
+            SELECT game_id, {foreign_key}
+            FROM {table_name}
+            WITH NO DATA;
+            """
+        )
+
+        total = len(rows)
+        log_progress(f'[{table_name}] staging {total} rows via COPY')
+        with cur.copy(f'COPY {temp_table_name} (game_id, {foreign_key}) FROM STDIN') as copy:
+            for start, chunk in chunked_rows(rows):
+                for row in chunk:
+                    copy.write_row(row)
+                log_progress(f'[{table_name}] staged {min(start + len(chunk), total)}/{total}')
+
+        cur.execute(
+            f"""
+            INSERT INTO {table_name} (game_id, {foreign_key})
+            SELECT DISTINCT game_id, {foreign_key}
+            FROM {temp_table_name}
+            ON CONFLICT DO NOTHING;
+            """
+        )
+        log_progress(f'[{table_name}] staged insert complete')
 
 
 def build_junction_rows(
@@ -450,37 +518,54 @@ def build_junction_rows(
 
 
 def run_import(input_csv: Path, dry_run: bool) -> None:
+    log_progress(f'Reading dataset from {input_csv}')
     df = load_dataset(input_csv)
+    log_progress('Extracting taxonomy dimensions')
     dimensions = extract_dimensions(df)
+    log_progress('Building normalized game rows')
     game_rows = build_game_rows(df)
 
-    print(f'Loaded {len(df)} game rows from {input_csv}')
+    log_progress(f'Loaded {len(df)} game rows from {input_csv}')
     for table_name in DIMENSION_COLUMNS:
-        print(f'{table_name}: {len(dimensions.get(table_name, {}))} unique names')
+        log_progress(f'{table_name}: {len(dimensions.get(table_name, {}))} unique names')
 
     if dry_run:
-        print(f'games rows prepared: {len(game_rows)}')
-        print('Dry-run enabled: skipping database writes.')
+        log_progress(f'games rows prepared: {len(game_rows)}')
+        log_progress('Dry-run enabled: skipping database writes.')
         return
 
     with psycopg.connect(DATABASE_URL) as conn:
+        log_progress('Connected to PostgreSQL')
         for table_name in DIMENSION_COLUMNS:
+            log_progress(f'Upserting dimension table: {table_name}')
             upsert_dimension_table(conn, table_name, dimensions.get(table_name, {}))
+        conn.commit()
+        log_progress('Committed dimensions')
 
+        log_progress('Upserting games')
         upsert_games(conn, game_rows)
+        conn.commit()
+        log_progress('Committed games')
 
         steam_ids = [int(row[0]) for row in game_rows]
+        log_progress('Fetching imported game identifiers')
         game_ids_by_app_id = fetch_game_ids(conn, steam_ids)
         dim_ids = {table: fetch_dimension_ids(conn, table) for table in DIMENSION_COLUMNS}
+        log_progress('Building junction rows')
         junction_rows = build_junction_rows(df, game_ids_by_app_id, dim_ids)
 
         for dimension_table, (junction_table, foreign_key) in JUNCTION_CONFIG.items():
+            log_progress(f'Upserting junction table: {junction_table} ({len(junction_rows.get(junction_table, []))} rows)')
             insert_junction_rows(conn, junction_table, foreign_key, junction_rows.get(junction_table, []))
+            conn.commit()
+            log_progress(f'Committed junction table: {junction_table}')
 
+        log_progress('Refreshing search vectors')
         refresh_search_vectors(conn)
         conn.commit()
+        log_progress('Committed search vector refresh')
 
-    print('Game and dimension import complete.')
+    log_progress('Game and dimension import complete.')
 
 
 def parse_args() -> argparse.Namespace:
@@ -516,25 +601,22 @@ def refresh_search_vectors(conn: psycopg.Connection) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
+            WITH tag_text AS (
+                SELECT
+                    g.id AS game_id,
+                    string_agg(t.name, ' ') AS tag_names
+                FROM games g
+                LEFT JOIN game_tags gt ON gt.game_id = g.id
+                LEFT JOIN tags t ON t.id = gt.tag_id
+                GROUP BY g.id
+            )
             UPDATE games g
             SET search_vector =
                 setweight(to_tsvector('english', COALESCE(g.name, '')), 'A') ||
                 setweight(to_tsvector('english', COALESCE(g.about_the_game, '')), 'B') ||
-                setweight(
-                    to_tsvector(
-                        'english',
-                        COALESCE(
-                            (
-                                SELECT string_agg(t.name, ' ')
-                                FROM game_tags gt
-                                JOIN tags t ON t.id = gt.tag_id
-                                WHERE gt.game_id = g.id
-                            ),
-                            ''
-                        )
-                    ),
-                    'C'
-                );
+                setweight(to_tsvector('english', COALESCE(tag_text.tag_names, '')), 'C')
+            FROM tag_text
+            WHERE tag_text.game_id = g.id;
             """
         )
 

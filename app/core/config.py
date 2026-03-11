@@ -2,6 +2,7 @@ from datetime import datetime
 from functools import lru_cache
 from typing import Annotated
 
+from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
@@ -87,6 +88,16 @@ def validate_runtime_settings(current_settings: Settings) -> None:
         failures.append('JWT_ACTIVE_PRIVATE_KEY must be configured in production.')
     if not current_settings.jwt_active_public_key:
         failures.append('JWT_ACTIVE_PUBLIC_KEY must be configured in production.')
+    else:
+        try:
+            load_pem_public_key(current_settings.jwt_active_public_key.encode('utf-8'))
+        except Exception:
+            failures.append('JWT_ACTIVE_PUBLIC_KEY must be a valid PEM-encoded public key.')
+    if current_settings.jwt_active_private_key:
+        try:
+            load_pem_private_key(current_settings.jwt_active_private_key.encode('utf-8'), password=None)
+        except Exception:
+            failures.append('JWT_ACTIVE_PRIVATE_KEY must be a valid PEM-encoded private key.')
 
     if failures:
         joined = ' '.join(failures)

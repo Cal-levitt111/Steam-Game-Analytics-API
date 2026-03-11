@@ -1,7 +1,24 @@
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, settings, validate_runtime_settings
 from app.main import create_app
+
+
+def _generate_test_pem_pair() -> tuple[str, str]:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_key = private_key.public_key()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode('utf-8')
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode('utf-8')
+    return private_pem, public_pem
 
 
 def test_validate_runtime_settings_rejects_insecure_production_config(monkeypatch) -> None:
@@ -25,17 +42,35 @@ def test_validate_runtime_settings_rejects_insecure_production_config(monkeypatc
 
 
 def test_validate_runtime_settings_allows_secure_production_config(monkeypatch) -> None:
+    private_pem, public_pem = _generate_test_pem_pair()
     monkeypatch.setattr(settings, 'environment', 'production')
     monkeypatch.setattr(settings, 'force_https', True)
     monkeypatch.setattr(settings, 'allowed_hosts', ['api.example.com'])
     monkeypatch.setattr(settings, 'secret_key', 'real-production-secret')
-    monkeypatch.setattr(settings, 'jwt_active_private_key', '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----')
-    monkeypatch.setattr(settings, 'jwt_active_public_key', '-----BEGIN PUBLIC KEY-----\nabc\n-----END PUBLIC KEY-----')
+    monkeypatch.setattr(settings, 'jwt_active_private_key', private_pem)
+    monkeypatch.setattr(settings, 'jwt_active_public_key', public_pem)
 
     app = create_app()
     assert app.title == settings.app_name
     client = TestClient(app, base_url='http://api.example.com')
     assert client.get('/docs').status_code == 404
+
+
+def test_validate_runtime_settings_rejects_invalid_pem_keys(monkeypatch) -> None:
+    monkeypatch.setattr(settings, 'environment', 'production')
+    monkeypatch.setattr(settings, 'force_https', True)
+    monkeypatch.setattr(settings, 'allowed_hosts', ['api.example.com'])
+    monkeypatch.setattr(settings, 'secret_key', 'real-production-secret')
+    monkeypatch.setattr(settings, 'jwt_active_private_key', 'not-a-private-key')
+    monkeypatch.setattr(settings, 'jwt_active_public_key', 'not-a-public-key')
+
+    try:
+        create_app()
+        raise AssertionError('Expected invalid JWT PEM config validation to fail.')
+    except RuntimeError as exc:
+        message = str(exc)
+        assert 'JWT_ACTIVE_PRIVATE_KEY must be a valid PEM-encoded private key.' in message
+        assert 'JWT_ACTIVE_PUBLIC_KEY must be a valid PEM-encoded public key.' in message
 
 
 def test_settings_normalize_escaped_newlines_for_pem_values() -> None:

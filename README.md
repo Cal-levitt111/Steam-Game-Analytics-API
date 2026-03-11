@@ -141,7 +141,10 @@ Default local URLs:
 
 ## API Docs
 
-Hosted/generated API docs: `<add generated API docs link here>`
+Generated API docs:
+
+- PDF reference: [docs/Steam Games Analytics API documentation.pdf](docs/Steam%20Games%20Analytics%20API%20documentation.pdf)
+- Interactive HTML reference: [docs/index.html](docs/index.html)
 
 In local development, FastAPI serves Swagger at `/docs`, ReDoc at `/redoc`, and the raw OpenAPI schema at `/openapi.json`.
 

@@ -37,7 +37,35 @@ export class ApiError extends Error {
   }
 }
 
-const apiBaseUrl = process.env.FASTAPI_BASE_URL ?? "http://127.0.0.1:8000";
+function resolveApiBaseUrl() {
+  const rawValue = process.env.FASTAPI_BASE_URL;
+
+  if (!rawValue) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FASTAPI_BASE_URL is not configured for the deployed frontend.");
+    }
+
+    return "http://127.0.0.1:8000";
+  }
+
+  const trimmedValue = rawValue.trim();
+  const normalizedValue =
+    (trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
+    (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))
+      ? trimmedValue.slice(1, -1).trim()
+      : trimmedValue;
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(normalizedValue);
+  } catch {
+    throw new Error(`FASTAPI_BASE_URL is not a valid absolute URL: ${JSON.stringify(rawValue)}`);
+  }
+
+  return parsedUrl.toString().replace(/\/$/, "");
+}
+
+const apiBaseUrl = resolveApiBaseUrl();
 
 async function apiFetch(path: string, options: ApiFetchOptions = {}) {
   const { accessToken, body, headers, query, ...init } = options;
@@ -56,12 +84,18 @@ async function apiFetch(path: string, options: ApiFetchOptions = {}) {
     requestBody = JSON.stringify(body);
   }
 
-  const response = await fetch(url, {
-    ...init,
-    body: requestBody,
-    headers: requestHeaders,
-    cache: init.cache ?? "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      body: requestBody,
+      headers: requestHeaders,
+      cache: init.cache ?? "no-store",
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Request to ${url} failed before a response was received: ${reason}`);
+  }
 
   const payload = await readJson(response);
 

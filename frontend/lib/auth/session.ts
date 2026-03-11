@@ -79,6 +79,8 @@ export function toErrorResponse(error: unknown) {
     return response;
   }
 
+  console.error("Unexpected Next.js auth route error", error);
+
   return NextResponse.json(
     {
       error: {
